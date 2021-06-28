@@ -1,0 +1,138 @@
+SHELL = sh
+
+includedir        = /usr/include
+sunincludedir   = <SUN_INCLUDE_PATH>
+libdir            = <STD_LIB_PATH>
+sunlibdir       = <SUN_LIB_PATH>
+tcmallocdir       = <TCMALLOC_LIB_PATH>
+tcmallocincludedir = <TCMALLOC_INCLUDE_PATH>
+
+CPP      := /usr/bin/cc
+CPPFLAGS = -O2
+ifndef CC
+CC       := /usr/bin/cc
+endif
+
+ifndef sanitychecks
+
+DEBUGFLAG := 
+
+else
+
+ifndef profiler
+DEBUGFLAG := -g -fsanitize=address
+else
+DEBUGFLAG := -g
+endif
+
+endif
+
+ifndef sanitychecks
+  CFLAGS   = -m64 -O2 -DNDEBUG -std=c99 -fopenmp -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -fno-common
+else
+  CFLAGS   = -m64 -O0 -DDEBUG ${DEBUGFLAG} -std=c99 -fopenmp -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-common
+endif
+
+
+ifdef dense_solver
+      CFLAGS += -DSUN_DENSE
+endif
+ifdef band_solver
+      CFLAGS += -DSUN_BAND=${band_solver}
+endif
+ifdef lapack_solver
+      CFLAGS += -DSUN_LAPACK_DENSE
+endif
+ifdef lapack_band_solver
+      CFLAGS += -DSUN_LAPACK_BAND=${band_solver}
+endif
+ifdef spgmr_solver
+      CFLAGS += -DSUN_SPGMR=${spgmr_solver}
+endif
+ifdef precondition_band
+      CFLAGS += -DPRECONDITION_BAND=${precondition_band}
+endif
+ifdef fixedpoint_iter
+      CFLAGS += -DSUN_NONLIN_FIXEDPOINT=${fixedpoint_iter}
+endif
+
+
+ifdef dump
+	CFLAGS += -DDUMP_Y=${dump}
+endif
+
+STATIC = 
+
+INCLUDES = -I${includedir} -I${sunincludedir} -I${tcmallocincludedir}
+
+LDFLAGS  = -L${libdir} ${sunlibdir}/libsundials_cvode.a ${sunlibdir}/libsundials_nvecserial.a  
+
+ifndef sanitychecks
+	LDFLAGS += ${tcmallocdir}/libtcmalloc.a
+else
+	LDFLAGS += -L${tcmallocdir}
+endif
+
+LIBS     = -lstdc++ -lpthread -lrt -ldl -lm -lz
+
+ifdef lapack_solver
+    LDFLAGS += ${sunlibdir}/libsundials_sunlinsollapackdense.a
+    LIBS += -llapack
+endif
+ifdef lapack_band_solver
+    LDFLAGS += ${sunlibdir}/libsundials_sunlinsollapackband.a
+    LIBS += -llapack
+endif
+
+LINKFLAGS = -Wl,-rpath,${tcmallocdir} \
+        -Wl,-rpath,${sunlibdir} 
+
+LIBRARIES = ${LIBS}
+LIBRARIES_BL = 
+LIBRARIES_SLUMT = 
+LIBRARIES_KLU = 
+LIBRARIES_PETSC = 
+
+EXAMPLES =  <PROGRAM_NAME>
+EXAMPLES_DEPENDENCIES = <DEPENDENCIES> memoryLib matrixLib sparseLib sundialsLib loadLib saveLib user_structures loaded-csv
+
+OBJECTS = ${EXAMPLES:=.o}
+OBJECTS_DEPENDENCIES = ${EXAMPLES_DEPENDENCIES:=.o}
+
+# -----------------------------------------------------------------------------------------
+
+.SUFFIXES : .o .c
+
+.c.o :
+	${CC} ${CFLAGS} ${INCLUDES} -c $<
+
+# -----------------------------------------------------------------------------------------
+
+all: ${OBJECTS}
+	@for i in ${EXAMPLES} ; do \
+	  echo "${CC} ${STATIC} -o $${i} $${i}.o ${OBJECTS_DEPENDENCIES} ${CFLAGS} ${LDFLAGS} ${INCLUDES} ${LIBRARIES} ${LIBRARIES_BL} ${LIBRARIES_SLUMT} ${LIBRARIES_KLU} ${LIBRARIES_PETSC} ${LINKFLAGS}" ; \
+	  ${CC} ${STATIC} -o $${i} $${i}.o ${OBJECTS_DEPENDENCIES} ${CFLAGS} ${LDFLAGS} ${INCLUDES} ${LIBRARIES} ${LIBRARIES_BL} ${LIBRARIES_SLUMT} ${LIBRARIES_KLU} ${LIBRARIES_PETSC} ${LINKFLAGS} ; \
+	done
+
+${OBJECTS}: ${OBJECTS_DEPENDENCIES}
+
+clean:
+	rm -f ${OBJECTS_DEPENDENCIES}
+	rm -f ${OBJECTS}
+	rm -f ${EXAMPLES}
+	rm -f *.aux *.log *.out
+	rm -f <PROGRAM_NAME>
+	rm -f <PROGRAM_NAME>_plot.*
+	rm -f <PROGRAM_NAME>.txt
+
+# -----------------------------------------------------------------------------------------
+
+simulation: all
+	./<PROGRAM_NAME>
+
+plots: <PROGRAM_NAME>.gnuplot <PROGRAM_NAME>.txt
+	gnuplot <PROGRAM_NAME>.gnuplot
+
+pendulum.txt: cvpendulum Makefile
+	./<PROGRAM_NAME> > <PROGRAM_NAME>.txt
+

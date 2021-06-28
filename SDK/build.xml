@@ -1,0 +1,28 @@
+<project name="LanguageTranslator SDK" default="jar">
+	<property name="libs.dir" value="lib/" />
+	<property name="classes.dir" value="build/classes" />
+	
+    <target name="clean">
+        <delete dir="build"/>
+    </target>
+
+  	<path id="classpath.base">  
+   		<fileset dir="${libs.dir}">
+    			<include name="**/*.jar"/>
+	        </fileset>
+   	</path>
+        	
+    <target name="compile">
+        <mkdir dir="${classes.dir}"/>
+        <javac srcdir="src" destdir="${classes.dir}">
+        	<classpath refid="classpath.base" />
+       	</javac>
+    </target>
+
+    <target name="jar" depends="clean, compile">
+        <mkdir dir="build/jar"/>
+        <jar destfile="build/jar/SDK.jar" basedir="build/classes">
+        </jar>
+    </target>
+
+</project>

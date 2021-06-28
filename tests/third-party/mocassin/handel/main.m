@@ -1,0 +1,3 @@
+tic
+resimmcode();
+disp(toc);

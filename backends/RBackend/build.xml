@@ -1,0 +1,35 @@
+<project name="RBackend" default="jar">
+	<property name="libs.dir" value="lib/" />
+	<property name="classes.dir" value="build/classes" />
+	
+    <target name="clean">
+        <delete dir="build"/>
+    </target>
+
+  	<path id="classpath.base">  
+   		<fileset dir="${libs.dir}">
+			<!-- EDIT: Modify to include or exclude specific jars -->
+    		<include name="**/*.jar"/>
+        </fileset>
+   	</path>
+        	
+    <target name="compile">
+        <mkdir dir="${classes.dir}"/>
+        <javac srcdir="src" destdir="${classes.dir}">
+        	<classpath refid="classpath.base" />
+       	</javac>
+
+	<mkdir dir="${classes.dir}/resources"/>
+        <copy todir="${classes.dir}/resources">
+            <fileset dir="resources" excludes="**/*.java"/>
+        </copy>
+
+    </target>
+
+    <target name="jar" depends="clean, compile">
+        <mkdir dir="build/jar"/>
+        <jar destfile="build/jar/RBackend.jar" basedir="build/classes">
+        </jar>
+    </target>
+
+</project>

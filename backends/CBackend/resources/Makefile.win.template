@@ -1,0 +1,75 @@
+SHELL = sh
+
+includedir        = /usr/local/include
+intelincludedir   = <MKL_LIB_PATH>/mkl/include/
+libdir            = /usr/local/lib
+intellibdir       = <MKL_LIB_PATH>
+
+CPP      = i686-w64-mingw32-gcc.exe
+CPPFLAGS = -O2
+CC       = i686-w64-mingw32-gcc.exe
+CFLAGS   = -O2
+
+INCLUDES = -I${intelincludedir} -I${includedir}
+LDFLAGS  = -L${intellibdir} -L${libdir}
+# -L${intellibdir}
+LIBS     = -lsundials_cvode -lsundials_nvecserial -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm
+# -lmkl_intel_c_dll -lmkl_sequential_dll -lmkl_core_dll
+# /cygdrive/c/Intel/compilers_and_libraries_2017.4.210/windows/mkl/lib/mic/libmkl_intel_lp64.a
+# /cygdrive/c/Intel/compilers_and_libraries_2017.4.210/windows/mkl/lib/mic/libmkl_sequential.a
+# /cygdrive/c/Intel/compilers_and_libraries_2017.4.210/windows/mkl/lib/mic/libmkl_core.a
+# /cygdrive/c/Intel/compilers_and_libraries_2017/windows/mkl/lib/mic/libmkl_intel_lp64.so /cygdrive/c/Intel/compilers_and_libraries_2017/windows/mkl/lib/mic/libmkl_sequential.so /cygdrive/c/Intel/compilers_and_libraries_2017/windows/mkl/lib/mic/libmkl_core.so
+LINKFLAGS = -Wl,-rpath,/usr/local/lib
+
+LIBRARIES = ${LIBS}
+LIBRARIES_BL = 
+LIBRARIES_SLUMT = 
+LIBRARIES_KLU = 
+LIBRARIES_PETSC = 
+
+EXAMPLES =  baseExpr
+ifdef USE_MKL
+	EXAMPLES_DEPENDENCIES = <DEPENDENCIES> memoryLib matrixLib sparseLib sundialsLib mklLib loadLib saveLib user_structures
+else
+	EXAMPLES_DEPENDENCIES = <DEPENDENCIES> memoryLib matrixLib sparseLib sundialsLib loadLib saveLib user_structures
+endif
+
+OBJECTS = ${EXAMPLES:=.o}
+OBJECTS_DEPENDENCIES = ${EXAMPLES_DEPENDENCIES:=.o}
+
+# -----------------------------------------------------------------------------------------
+
+.SUFFIXES : .o .c
+
+.c.o :
+	${CC} ${CPPFLAGS} ${CFLAGS} ${INCLUDES} -c $<
+
+# -----------------------------------------------------------------------------------------
+
+all: ${OBJECTS}
+	@for i in ${EXAMPLES} ; do \
+	  echo "${CC} -o $${i} $${i}.o ${OBJECTS_DEPENDENCIES} ${CFLAGS} ${LDFLAGS} ${INCLUDES} ${LIBRARIES} ${LIBRARIES_BL} ${LIBRARIES_SLUMT} ${LIBRARIES_KLU} ${LIBRARIES_PETSC} ${LINKFLAGS}" ; \
+	  ${CC} -o $${i} $${i}.o ${OBJECTS_DEPENDENCIES} ${CFLAGS} ${LDFLAGS} ${INCLUDES} ${LIBRARIES} ${LIBRARIES_BL} ${LIBRARIES_SLUMT} ${LIBRARIES_KLU} ${LIBRARIES_PETSC} ${LINKFLAGS} ; \
+	done
+
+${OBJECTS}: ${OBJECTS_DEPENDENCIES}
+
+clean:
+	rm -f ${OBJECTS_DEPENDENCIES}
+	rm -f ${OBJECTS}
+	rm -f ${EXAMPLES}
+	rm -f *.aux *.log *.out
+	rm -f baseExpr
+	rm -f baseExpr_plot.*
+	rm -f baseExpr.txt
+# -----------------------------------------------------------------------------------------
+
+run: all
+	./baseExpr
+
+plots: baseExpr.gnuplot baseExpr.txt
+	gnuplot baseExpr.gnuplot
+
+pendulum.txt: cvpendulum Makefile
+	./baseExpr > baseExpr.txt
+

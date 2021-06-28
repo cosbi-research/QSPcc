@@ -1,0 +1,43 @@
+<project name="QSPcc" default="jar">
+	<property name="libs.dir" value="lib/" />
+	<property name="dist.dir" value="dist/" />
+	<property name="classes.dir" value="build/classes" />
+        <property name="test.classes.dir" value="build/testclasses" />
+
+    <target name="clean">
+        <delete dir="build"/>
+    </target>
+
+  	<path id="classpath.base">  
+   		<fileset dir="${libs.dir}">
+			<!-- EDIT: Modify to include or exclude specific jars -->
+    		<include name="**/*.jar"/>
+        </fileset>
+   	</path>
+
+    <target name="compile">
+        <mkdir dir="${classes.dir}"/>
+        <javac srcdir="src" destdir="${classes.dir}">
+        	<classpath refid="classpath.base" />
+	</javac>
+	<mkdir dir="${test.classes.dir}"/>
+        <javac srcdir="test" destdir="${test.classes.dir}">
+                <classpath>
+                        <path refid="classpath.base"/>
+                        <pathelement path="${classes.dir}" />
+                </classpath>
+        </javac>
+    </target>
+
+    <target name="jar" depends="clean, compile">
+        <mkdir dir="build/jar"/>
+        <jar destfile="build/jar/QSPcc.jar" basedir="${classes.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="eu.cosbi.translator.start.Starter"/>
+            </manifest>
+        </jar>
+        <jar destfile="build/jar/QSPccTests.jar" basedir="${test.classes.dir}">
+        </jar>
+    </target>
+
+</project>

@@ -1,0 +1,3 @@
+tic
+antagonist();
+disp(toc);

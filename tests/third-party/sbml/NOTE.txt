@@ -1,0 +1,14 @@
+1. SBFC bug: function f takes as input t,x but in translated code it uses 'time', not 't'
+2. SBFC bug: 
+% Species:   id = Pi, name = Pi
+% Warning species is not changed by either rules or reactions
+	xdot(5) = ;
+generate non-working code with a warning in a comment
+3. SBFC bug:
+  uses undefined variables: global_par_KatpaseW
+  in Lai2007
+4. SBFC bug:
+  Many SBML models from biomodels are not translated correctly (missing variables) ex (hu2019  Lai2007  li2016  liu2017  lolas2016 Rhodes2019)
+  Some SBML models do have the assignment of a variable after it's use (Winter2017)
+5. SBFC bug:
+  ln is not defined

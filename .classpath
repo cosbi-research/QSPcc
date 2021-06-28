@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/commons-cli-1.4.jar"/>
+	<classpathentry kind="lib" path="lib/reflections-0.9.10.jar"/>
+	<classpathentry kind="lib" path="backends/CBackend/lib/commons-io-2.5.jar"/>
+	<classpathentry kind="lib" path="lib/disruptor-3.4.2.jar"/>
+	<classpathentry kind="lib" path="lib/log4j-api-2.13.2.jar"/>
+	<classpathentry kind="lib" path="lib/log4j-core-2.13.2.jar"/>
+	<classpathentry kind="lib" path="lib/guava-19.0.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/SDK"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/MiddleEnd"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/CBackend"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/MatlabFrontend"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/MISTBackend"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/RBackend"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/CBackendExtension"/>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="test"/>
+	<classpathentry kind="lib" path="lib/junit-4.12.jar"/>
+	<classpathentry kind="lib" path="lib/parameterized-suite-1.1.0.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

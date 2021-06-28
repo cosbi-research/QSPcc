@@ -1,0 +1,33 @@
+<project name="MatlabFrontend" default="jar">
+	<property name="libs.dir" value="lib/" />
+	<property name="classes.dir" value="build/classes" />
+	
+    <target name="clean">
+        <delete dir="build"/>
+    </target>
+
+  	<path id="classpath.base">  
+   		<fileset dir="${libs.dir}">
+			<!-- EDIT: Modify to include or exclude specific jars -->
+    		<include name="**/*.jar"/>
+        </fileset>
+   	</path>
+        	
+    <target name="compile">
+        <mkdir dir="${classes.dir}"/>
+        
+        <javac srcdir="src" destdir="${classes.dir}">
+        	<classpath refid="classpath.base" />
+       	</javac>
+    </target>
+
+    <target name="jar" depends="clean, compile">
+        <mkdir dir="build/jar"/>
+        <jar destfile="build/jar/MatlabFrontend.jar" basedir="build/classes">
+            <manifest>
+                <attribute name="Main-Class" value="eu.cosbi.translator.start.Starter"/>
+            </manifest>
+        </jar>
+    </target>
+
+</project>

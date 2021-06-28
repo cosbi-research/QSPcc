@@ -1,0 +1,20 @@
+#!/bin/sh
+
+TRANSLATOR_HOME="."
+DOCKERIZED="no"
+FQN="eu.cosbi.qspcc"
+
+unameOut="$(uname -s)"
+PATHSEP=":"
+case "${unameOut}" in
+    Linux*)     MACHINE=Linux;;
+    Darwin*)    MACHINE=Mac;;
+    CYGWIN*)    MACHINE=Cygwin
+		PATHSEP=";"
+		;;
+    MINGW*)     MACHINE=MinGw;;
+    *)          MACHINE="UNKNOWN${PATHSEP}${unameOut}"
+esac
+
+
+java -Dlog4j2.contextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector -cp "$TRANSLATOR_HOME/lib/reflections-0.9.10.jar${PATHSEP}$TRANSLATOR_HOME/lib/guava-19.0.jar${PATHSEP}$TRANSLATOR_HOME/lib/javassist-3.22.0-GA.jar${PATHSEP}$TRANSLATOR_HOME/lib/commons-cli-1.4.jar${PATHSEP}$TRANSLATOR_HOME/lib/antlr-3.5-complete.jar${PATHSEP}$TRANSLATOR_HOME/lib/commons-io-2.5.jar${PATHSEP}$TRANSLATOR_HOME/lib/disruptor-3.4.2.jar${PATHSEP}$TRANSLATOR_HOME/lib/log4j-api-2.13.2.jar${PATHSEP}$TRANSLATOR_HOME/lib/log4j-core-2.13.2.jar${PATHSEP}$TRANSLATOR_HOME/dist/SDK.jar${PATHSEP}$TRANSLATOR_HOME/dist/MiddleEnd.jar${PATHSEP}$TRANSLATOR_HOME/dist/CBackend.jar${PATHSEP}$TRANSLATOR_HOME/dist/RBackend.jar${PATHSEP}$TRANSLATOR_HOME/dist/MISTBackend.jar${PATHSEP}$TRANSLATOR_HOME/dist/MatlabFrontend.jar${PATHSEP}$TRANSLATOR_HOME/dist/QSPcc.jar" eu.cosbi.qspcc.start.Starter "$MACHINE" "$TRANSLATOR_HOME" "$DOCKERIZED" "$FQN" $@

@@ -1,0 +1,6 @@
+#!/bin/bash
+#SBATCH --ntasks=1
+#SBATCH --mem=10g
+#SBATCH --account=cosbi
+#SBATCH --output=<PROGRAM_NAME>.log
+./<PROGRAM_NAME>
