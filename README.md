@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/134552857.svg)](https://zenodo.org/badge/latestdoi/134552857)
+
 # QSPcc: Breaking through model simulation time limits
 
 Mathematical models have grown in size and complexity to the extent that are often computationally intractable. In sensitivity analysis and optimization phases, critical for tuning, validation and qualification, models of ever-increasing complexity may be run thousands of times with varying parameters. Scientific programming languages popular for prototyping, such as MATLAB and R, can be a bottleneck in terms of performance.
