@@ -2428,8 +2428,8 @@ public enum ErrorMessage implements ErrorCode {
 					"%s%s\n%s\n"
 					+ ret,
 					
-					location,			// file...function..."following error(s)"
-					node.location(),	// line X, char Y					
+					location,			        // file...function..."following error(s)"
+					(node != null)? node.location() : "",	// line X, char Y					
 					" "+ getCode(node)	// offending code
 			);
 
