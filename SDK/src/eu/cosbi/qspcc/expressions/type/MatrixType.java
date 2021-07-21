@@ -64,6 +64,12 @@ public class MatrixType extends DimensionType {
 	return of;
     }
 
+    @Override
+    public GType toScalar() {
+	of = GType.get(BType.SCALAR);
+	return this;
+    }
+
     /**
      * set default dimensions with symbolic name and no value
      * 

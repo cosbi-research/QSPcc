@@ -1912,8 +1912,17 @@ public class ExpressionStatement extends Statement {
     private GType matrixScalarOp(AASTNode node, GType matrix, GType scalar) {
 	DimensionType dtype = (DimensionType) matrix;
 	IntType[] dims = dtype.dims();
-	// GType ret = GType.get(matrix);
-	if (dtype.of().canRepresent(scalar))
+
+	if (node.type().equals(NodeType.LEFTDIV) || node.type().equals(NodeType.ELEMENTWISE_LEFTDIV))
+	    return ((DimensionType) GType.get(matrix).name(TypeUtils.matrixName(node))).toScalar();
+	else if (node.type().equals(NodeType.ELEMENTWISE_EXP))
+	    // in this case the type should always be promoted to matrix if it is not matrix (slice)
+	    if (dtype.of().canRepresent(scalar))
+		// type doesn't change
+		return GType.get(BType.MATRIX, TypeUtils.matrixName(node), GType.get(dtype.of().type()), dims, false);
+	    else
+		return GType.get(BType.MATRIX, TypeUtils.matrixName(node), GType.get(scalar.type()), dims, false);
+	else if (dtype.of().canRepresent(scalar))
 	    // matrix type doesn't change
 	    return GType.get(matrix).name(TypeUtils.matrixName(node));
 	else if (matrix instanceof MatrixType)

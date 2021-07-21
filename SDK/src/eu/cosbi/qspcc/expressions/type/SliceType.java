@@ -105,6 +105,18 @@ public class SliceType extends DimensionType {
 	return of;
     }
 
+    @Override
+    public GType toScalar() {
+	of = GType.get(BType.SCALAR);
+	// if the slice numbers were known in the original type, forget it
+	// because this method will be invoked as a result of an arithmetic operation with this type
+	// ex. (2:10)/10 -> 0.2 0.3 ... 1.0
+	slices = new Triple<GType, GType, GType>(GType.get(BType.SCALAR), GType.get(BType.SCALAR),
+		GType.get(BType.SCALAR));
+	// dimension will be untouched
+	return this;
+    }
+
     public void of(GType newOf) {
 	of = newOf;
     }

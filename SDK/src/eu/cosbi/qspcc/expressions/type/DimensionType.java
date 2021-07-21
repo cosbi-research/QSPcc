@@ -23,4 +23,10 @@ public abstract class DimensionType extends GType implements LinkType<GType>, Di
 		return false;
 	return true;
     }
+
+    /**
+     * convert the given type such that it contains a scalar type
+     * @return
+     */
+    public abstract GType toScalar();
 }

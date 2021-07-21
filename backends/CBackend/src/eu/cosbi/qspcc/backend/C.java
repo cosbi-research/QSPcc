@@ -6028,9 +6028,9 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 	    case LEFTDIV:
 	    case ELEMENTWISE_LEFTDIV:
 		// return the new slice
-		toBeSetParameters[0] = matrixName + STRUCT_ACCESS + "start/" + scalarName;
-		toBeSetParameters[1] = matrixName + STRUCT_ACCESS + "step/" + scalarName;
-		toBeSetParameters[2] = matrixName + STRUCT_ACCESS + "end/" + scalarName;
+		toBeSetParameters[0] = matrixName + STRUCT_ACCESS + "start/((" + cType + ") " + scalarName + ")";
+		toBeSetParameters[1] = matrixName + STRUCT_ACCESS + "step/((" + cType + ") " + scalarName + ")";
+		toBeSetParameters[2] = matrixName + STRUCT_ACCESS + "end/((" + cType + ") " + scalarName + ")";
 		toBeSetParameters[3] = matrixName + STRUCT_ACCESS + "dim1";
 
 		break;
@@ -10071,7 +10071,12 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
     protected boolean ensureMatrixMemory(StringBuffer buffer, AASTNode matrixToBeAllocated, String matrixName,
 	    IntType[] customizeDimensions, String sparseDimToAllocate)
 	    throws TypeException, UndefinedTranslationException {
-	MatrixType matrixType = (MatrixType) getExprGeneralized(matrixToBeAllocated);
+	GType type = getExprGeneralized(matrixToBeAllocated);
+	if (!type.equals(BType.MATRIX))
+	    // do nothing, this is not a matrix
+	    return false;
+
+	MatrixType matrixType = (MatrixType) type;
 	String[] cdims = new String[customizeDimensions.length];
 	for (int i = 0; i < customizeDimensions.length; ++i)
 	    cdims[i] = customizeDimensions[i].valueAsString();
@@ -10081,7 +10086,12 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 
     protected boolean ensureMatrixMemory(StringBuffer buffer, AASTNode matrixToBeAllocated, String matrixName,
 	    IntType[] customizeDimensions, boolean calloc) throws TypeException, UndefinedTranslationException {
-	MatrixType matrixType = (MatrixType) getExprGeneralized(matrixToBeAllocated);
+	GType type = getExprGeneralized(matrixToBeAllocated);
+	if (!type.equals(BType.MATRIX))
+	    // do nothing, this is not a matrix
+	    return false;
+
+	MatrixType matrixType = (MatrixType) type;
 	String[] cdims = new String[customizeDimensions.length];
 	for (int i = 0; i < customizeDimensions.length; ++i)
 	    cdims[i] = customizeDimensions[i].valueAsString();
@@ -10095,7 +10105,11 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 
     protected boolean ensureMatrixMemory(StringBuffer buffer, AASTNode matrixToBeAllocated, String matrixName,
 	    String[] customizeDimensions) throws TypeException, UndefinedTranslationException {
-	MatrixType matrixType = (MatrixType) getExprGeneralized(matrixToBeAllocated);
+	GType type = getExprGeneralized(matrixToBeAllocated);
+	if (!type.equals(BType.MATRIX))
+	    // do nothing, this is not a matrix
+	    return false;
+	MatrixType matrixType = (MatrixType) type;
 	return ensureMatrixMemory(buffer, matrixToBeAllocated, matrixName, matrixType, customizeDimensions);
     }
 
