@@ -5253,10 +5253,10 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 
     private AASTNode getIterNodeImpl(AASTNode original, AASTNode current, List<AASTNode> blackList) {
 	if (!blackList.contains(current)) {
-	    if ((current.type().equals(NodeType.ID) || current.type().equals(NodeType.APPLY) // &&
-											     // current.hasAttr(NodeAttr.MATACCESS))
-		    || current.type().equals(NodeType.MATRIX) || current.type().equals(NodeType.TRANSPOSE)
-		    || current.type().equals(NodeType.ELEMENTWISE_CCT))) {
+	    // id/apply/colon (for the slices) are the bottom-level iterators
+	    if ((current.type().equals(NodeType.ID) || current.type().equals(NodeType.APPLY)
+		    || current.type().equals(NodeType.COLON) || current.type().equals(NodeType.MATRIX)
+		    || current.type().equals(NodeType.TRANSPOSE) || current.type().equals(NodeType.ELEMENTWISE_CCT))) {
 		return getParentNodeImpl(original, current, blackList);
 	    } else if (current.type().equals(NodeType.FIELDACCESS)) {
 		// get from last id only
