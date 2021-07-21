@@ -5607,7 +5607,11 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			    ErrorMessage.UNSUPPORTED_MATRIX_MATRIX_OPERATION_BETWEEN_INCOMPATIBLE_MATRICES, curRoot,
 			    lexpr, rexpr);
 
-		createVariable(curRoot, "0");
+		boolean created = createVariable(outNode, "0");
+		if (!created)
+		    // initialize here
+		    sb.append(newSymbol).append(" = 0;").append(NL);
+
 		// simple element-wise product of vectors
 		sb.append("#pragma omp smid").append(NL);
 		sb.append("for(int " + index + " = 0 ; " + index + " < " + matrixLeftDims[0].valueAsString() + " ; ++"
