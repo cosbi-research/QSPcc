@@ -7626,6 +7626,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		String[] dimsStr = new String[] { row.valueAsString(), row.valueAsString() };
 		// calloc = true! (last parameter)
 		ensureMatrixMemory(sb, outNode, outVarName, outType, dimsStr, false, true, false, null);
+		sb.append("#pragma omp smid").append(NL);
 		sb.append("for (int " + i + " = 1; " + i + " <= " + min + "; ++" + i + ")").append(NL);
 		sb.append(TAB).append(outVarName + STRUCT_ACCESS + "matrix[matrixAccess(" + outVarName + STRUCT_ACCESS
 			+ "poly_basis, 2, 2, " + min + ", " + min + ", " + i + ", " + i + ")] = ");
