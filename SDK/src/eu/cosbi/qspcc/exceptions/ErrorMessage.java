@@ -2424,14 +2424,8 @@ public enum ErrorMessage implements ErrorCode {
 	
 	// Add header with contextual info and return
 	// TODO: handling of errors related to variables used hereafter
-	return String.format(
-					"%s%s\n%s\n"
-					+ ret,
-					
-					location,			        // file...function..."following error(s)"
-					(node != null)? node.location() : "",	// line X, char Y					
-					" "+ getCode(node)	// offending code
-			);
+	String line = (node != null)? node.location() : "";
+	return location+line+"\n "+getCode(node)+"\n"+ret;
 
     }
 // @formatter:on
