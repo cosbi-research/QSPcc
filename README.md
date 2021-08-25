@@ -50,6 +50,8 @@ There are 2 simple setup steps:
 ```
 docker pull cosbi/qspcc
 ```
+   Or visit [QSPcc's DockerHub page](https://hub.docker.com/r/cosbi/qspcc).
+
 
 ### QSPcc usage
 
