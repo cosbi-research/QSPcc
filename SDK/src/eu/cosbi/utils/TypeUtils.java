@@ -1572,7 +1572,6 @@ public class TypeUtils {
 	    if (node.parentExists(statementType.handledNodes())) {
 		AASTNode statement = node.parent(statementType.handledNodes());
 		TypeUtils.markStatementToBeReparsed(statement, true);
-		break;
 	    }
     }
 
