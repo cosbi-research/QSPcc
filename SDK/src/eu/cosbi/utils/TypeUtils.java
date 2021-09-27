@@ -1320,9 +1320,13 @@ public class TypeUtils {
 		if (exprs.size() > 1)
 		    // if cannot determine input, cannot determine output
 		    applyNode.expr(GType.get(BType.UNKNOWN), false);
-		else
+		else {
 		    // no ambiguity
-		    applyNode.exprs(exprs, false);
+		    List<GType> applyNodeExprs = new LinkedList<>();
+		    for (GType e : exprs)
+			applyNodeExprs.add(GType.get(e));
+		    applyNode.exprs(applyNodeExprs, false);
+		}
 	    }
 	} else {
 	    // we need a struct
