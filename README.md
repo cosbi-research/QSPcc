@@ -10,7 +10,7 @@ Basic translation to R code is also provided to support interoperability between
 
 In modern model-based drug discovery and development, QSPcc accelerated, or enabled, to holistically track sophisticated system interactions to support decision making in translational research of rare diseases.
  
-For details, citation and contact information see the paper *QSPcc: Breaking through model simulation time limits*.
+For details, citation and contact information see the paper *[QSPcc reduces bottlenecks in computational model simulation](https://doi.org/10.1038/s42003-021-02553-9)*.
 
 
 
@@ -50,6 +50,8 @@ There are 2 simple setup steps:
 ```
 docker pull cosbi/qspcc
 ```
+   Or visit [QSPcc's DockerHub page](https://hub.docker.com/r/cosbi/qspcc).
+
 
 ### QSPcc usage
 
