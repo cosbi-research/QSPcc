@@ -1,5 +1,6 @@
 package eu.cosbi.qspcc.interfaces;
 
+import eu.cosbi.qspcc.exceptions.ListException;
 import eu.cosbi.qspcc.expressions.type.GType;
 import eu.cosbi.qspcc.interfaces.CompilerFrontend.IFunction;
 
@@ -12,7 +13,7 @@ import eu.cosbi.qspcc.interfaces.CompilerFrontend.IFunction;
  *
  */
 public interface MiddleEnd extends CompilerModule {
-    public boolean annotate(IFunction[] coreFunctions, boolean stopOnError);
+    public ListException annotate(IFunction[] coreFunctions, boolean stopOnError);
 
     /**
      * default type for the parameters of function programs (without an input script)

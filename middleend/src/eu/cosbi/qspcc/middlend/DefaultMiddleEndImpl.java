@@ -22,6 +22,7 @@ import eu.cosbi.qspcc.ast.Program;
 import eu.cosbi.qspcc.exceptions.ErrorMessage;
 import eu.cosbi.qspcc.exceptions.GException;
 import eu.cosbi.qspcc.exceptions.ListException;
+import eu.cosbi.qspcc.exceptions.TypeException;
 import eu.cosbi.qspcc.expressions.type.GType;
 import eu.cosbi.qspcc.expressions.type.TypeDefinition.BType;
 import eu.cosbi.qspcc.interfaces.CompilerFrontend.IFunction;
@@ -46,7 +47,7 @@ public class DefaultMiddleEndImpl implements MiddleEnd {
     private String functionalEntryPoint;
     // % calculated_parameters_Liver_Tissue_Plasma MATRIX[83, 1] of SCALAR
     private static Pattern funTypePattern = Pattern.compile(
-	    "(\\w+)\\s+(MATRIX\\[\\s*(?:[0-9]+|INT)(?:\\s*,\\s*(?:[0-9]+|INT))*\\s*\\]\\s+of\\s+(?:SCALAR|INT|BOOL)|SCALAR|INT|BOOL)");
+	    "^\\s*%\\s+(\\w+)\\s+(MATRIX\\[\\s*(?:[0-9]+|INT)(?:\\s*,\\s*(?:[0-9]+|INT))*\\s*\\]\\s+of\\s+(?:SCALAR|INT|BOOL)|SCALAR|INT|BOOL)");
     private static Pattern pend = Pattern.compile("==END==");
 
     public DefaultMiddleEndImpl(Program program) {
@@ -61,12 +62,12 @@ public class DefaultMiddleEndImpl implements MiddleEnd {
     }
 
     @Override
-    public boolean annotate(IFunction[] coreFunctions, boolean stopOnError) {
+    public ListException annotate(IFunction[] coreFunctions, boolean stopOnError) {
 	try {
 	    firstPass(coreFunctions, stopOnError);
 	} catch (GException e) {
+	    unrecoverable_errors.add(e);
 	    logger.debug("First-pass error translating program tree: " + e.getMessage(), e);
-	    return false;
 	}
 	// if (unrecoverable_errors.isEmpty() && !program.walkNeeded() &&
 	// !program.statementWalkNeeded())
@@ -75,9 +76,10 @@ public class DefaultMiddleEndImpl implements MiddleEnd {
 	try {
 	    defineMainFunctionTypes(stopOnError);
 	} catch (GException e) {
+	    unrecoverable_errors.add(e);
 	    logger.debug("function header parsing error translating program tree: " + e.getMessage(), e);
-	    return false;
 	}
+
 	// 2..N th pass to resolve function body and return value
 	int i = 2;
 	int i_eq = 1;
@@ -129,8 +131,9 @@ public class DefaultMiddleEndImpl implements MiddleEnd {
 		    }, stopOnError);
 		    i++;
 		} catch (GException e) {
+		    unrecoverable_errors.add(e);
 		    logger.debug("Second-pass error translating program tree: " + e.getMessage(), e);
-		    return false;
+		    break;
 		}
 
 		// update missing functions
@@ -149,10 +152,10 @@ public class DefaultMiddleEndImpl implements MiddleEnd {
 	try {
 	    lastPass(stopOnError);
 	} catch (GException e) {
+	    unrecoverable_errors.add(e);
 	    logger.debug("Last-pass error translating program tree: " + e.getMessage(), e);
-	    return false;
 	}
-	return unrecoverable_errors.isEmpty() && !program.walkNeeded();
+	return unrecoverable_errors;
     }
 
     private void walkIncompleteStatements(boolean stopOnError) {
@@ -231,6 +234,10 @@ public class DefaultMiddleEndImpl implements MiddleEnd {
 			varType = varType.replaceAll("\\s+", " ");
 			varType = varType.replaceAll("^\\s|\\s$", "");
 			funInputTypes.put(varName, GType.get(varName, varType));
+		    } else {
+			GException ge = new TypeException(ErrorMessage.WARN_FUNCTION_TYPE_HEADER_UNEXPECTED_LINE,
+				functionNode, child.name());
+			functionNode.compilationUnit().addWarning(ge);
 		    }
 		}
 	}
@@ -247,9 +254,11 @@ public class DefaultMiddleEndImpl implements MiddleEnd {
 		param.expr(GType.get(funInputs[k]));
 	    } else {
 		rewalk = false;
-		break;
-		// throw new TypeException(ErrorMessage.MAIN_FUNCTION_INPUT_TYPES_UNDEFINED,
-		// param, param.name());
+		GException ge = new TypeException(ErrorMessage.USER_MAIN_FUNCTION_INPUT_TYPES_UNDEFINED, param,
+			param.name());
+		functionNode.compilationUnit().addError(ge);
+		//make program fail
+		throw ge;
 	    }
 	}
 

@@ -190,7 +190,7 @@ public class CompilerController {
 	    throw globalErrors;
 	}
 	logger.debug("Middleend is building AAST..");
-	boolean ok = mainMiddleEnd.annotate(backendCoreFunctions, stopAnnotationOnError);
+	ListException errors = mainMiddleEnd.annotate(backendCoreFunctions, stopAnnotationOnError);
 
 	logger.debug(" === Structures defined === ");
 	for (StructDefinition struct : program.userStructures()) {
@@ -198,7 +198,7 @@ public class CompilerController {
 	}
 	logger.debug(" === Structures defined end === ");
 
-	if (!ok) {
+	if (program.walkNeeded() || !errors.isEmpty()) {
 	    // error in middle-end stop here and report to user the errors/warnings
 	    GException globalErrors = new GException(ErrorMessage.FINAL_REPORTING_TEMPLATE, null, program);
 	    logger.error(globalErrors.stringify());

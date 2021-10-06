@@ -1,8 +1,6 @@
 package eu.cosbi.qspcc.start;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -149,13 +147,13 @@ public class Starter {
 	 * } }));
 	 */
 	// @formatter:off
-
+/*
 	System.setErr(new PrintStream(new OutputStream() {
 
 	    public void write(int b) throws IOException { // ignore
 	    }
 	}));
-
+*/
 	// @formatter:on
 
 	CompilerController c = new CompilerController(fromLanguage, toLanguage, defineVariables, mainSourcePath,

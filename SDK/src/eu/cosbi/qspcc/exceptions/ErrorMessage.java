@@ -101,6 +101,7 @@ public enum ErrorMessage implements ErrorCode {
     UNSUPPORTED,
     USER_ERROR_COPYING_INPUT_FILES,
     USER_MAIN_IS_NOT_FUNCTION,
+    USER_MAIN_FUNCTION_INPUT_TYPES_UNDEFINED,
     USER_NULL_ASSIGNMENT_ALL_MISSING,
     USER_SYNTAX_ERROR_CASE_BEFORE_SWITCH,
     USER_SYNTAX_ERROR_ELSE_BEFORE_IF,
@@ -120,7 +121,8 @@ public enum ErrorMessage implements ErrorCode {
     WARN_FLAT_INDEX_OUT_OF_BOUNDS,
     WARN_FUN_FORMAL_PARAM_DONT_MATCH,
     WARN_VARIABLE_WITH_MULTIPLE_TYPES,
-    WARN_USER_IMPLICITLY_PROMOTING_SCALAR_VARIABLE;
+    WARN_USER_IMPLICITLY_PROMOTING_SCALAR_VARIABLE,
+    WARN_FUNCTION_TYPE_HEADER_UNEXPECTED_LINE;
 
     ErrorMessage() {
     }
@@ -2140,6 +2142,26 @@ public enum ErrorMessage implements ErrorCode {
 			getFunctionEntryPointInfo(node)
 		);
 	break;
+	case USER_MAIN_FUNCTION_INPUT_TYPES_UNDEFINED:
+	    /**
+	     * generated_by: ComplerController
+	     * example:
+	     *  % ==FUNCTION== "..."
+	     *  ...params definition, missing Y...
+	     *  % ==END==
+	     *  function k=f(..., Y, ...)
+	     *  ...
+	     *  end
+	     *  
+	     *  notes:
+	     *  Missing parameter 'Y'
+	     */
+	    ret = String.format(
+			"Syntax error: Parameter type for 'Y' was not defined in header.\n%s", 
+	    // ERROR message arguments
+			getFunctionEntryPointInfo(node)
+		);
+	    break;
 	case INTERNAL_AT_NODE_STRUCTURE:
 	    /**
 	     * generated_by: Middleend
@@ -2417,6 +2439,9 @@ public enum ErrorMessage implements ErrorCode {
 				extension_info
 			);
 	break;
+	case WARN_FUNCTION_TYPE_HEADER_UNEXPECTED_LINE:
+	    ret = String.format("Line:\n %s\nwas not recognized as a function variable type.\n%s", params[0], getFunctionEntryPointInfo(node));
+	    break;
 	default:
 	    ret = String.format("UNDEFINED_ERROR_STRING");
 	    break;
