@@ -3784,7 +3784,17 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		    // add for loops
 		    String[] counterVariableNames = new String[dims.length];
 		    String[] dimsAsString = new String[dims.length];
-		    for (int d = 0; d < dims.length; ++d) {
+		    int start = dims.length - 1;
+		    int stop = 0;
+		    int step = -1;
+		    if (!ROWMAJOR) {
+			// actually C layout is colmajor, so iterate in order
+			start = 0;
+			stop = dims.length - 1;
+			step = 1;
+		    }
+		    // iterate in inverse order, the first dimension should be the inner-most for rowmajor layout
+		    for (int d = start; d >= stop; d += step) {
 			String length = dims[d].valueAsString();
 			dimsAsString[d] = length;
 			String counterVariableName = counterPrefix + counterSuffix;
