@@ -2157,7 +2157,7 @@ public enum ErrorMessage implements ErrorCode {
 	     *  Missing parameter 'Y'
 	     */
 	    ret = String.format(
-			"Syntax error: Parameter type for 'Y' was not defined in header.\n%s", 
+			"Syntax error: Parameter type for '"+params[0]+"' was not defined in header.\n%s", 
 	    // ERROR message arguments
 			getFunctionEntryPointInfo(node)
 		);
