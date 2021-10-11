@@ -215,6 +215,7 @@ public class DefaultMiddleEndImpl implements MiddleEnd {
 	// and fill the map varname -> vartype
 	Map<String, GType> funInputTypes = new HashMap<String, GType>(params.size());
 	boolean read_type_information = false;
+	boolean type_header_present = false;
 	Pattern pstart = Pattern.compile("==FUNCTION==\\s+\"" + functionName + "\"");
 	Matcher m = null;
 	for (AASTNode child : stmt_list.childs()) {
@@ -226,6 +227,7 @@ public class DefaultMiddleEndImpl implements MiddleEnd {
 		    // found beginning of type information
 		    read_type_information = false;
 		} else if (read_type_information) {
+		    type_header_present = true;
 		    // read types
 		    m = funTypePattern.matcher(child.name());
 		    if (m.find()) {
@@ -243,43 +245,45 @@ public class DefaultMiddleEndImpl implements MiddleEnd {
 	}
 
 	// define his input types
-	GType[] funInputs = new GType[params.size()];
-	GType[] funOutputs = new GType[outputs.size()];
-	boolean rewalk = true;
-	for (int k = 0; k < params.size(); ++k) {
-	    AASTNode param = params.get(k);
-	    if (funInputTypes.containsKey(param.name())) {
-		funInputs[k] = funInputTypes.get(param.name());
-		// always clone type
-		param.expr(GType.get(funInputs[k]));
-	    } else {
-		rewalk = false;
-		GException ge = new TypeException(ErrorMessage.USER_MAIN_FUNCTION_INPUT_TYPES_UNDEFINED, param,
-			param.name());
-		functionNode.compilationUnit().addError(ge);
-		//make program fail
-		throw ge;
+	if (type_header_present) {
+	    GType[] funInputs = new GType[params.size()];
+	    GType[] funOutputs = new GType[outputs.size()];
+	    boolean rewalk = true;
+	    for (int k = 0; k < params.size(); ++k) {
+		AASTNode param = params.get(k);
+		if (funInputTypes.containsKey(param.name())) {
+		    funInputs[k] = funInputTypes.get(param.name());
+		    // always clone type
+		    param.expr(GType.get(funInputs[k]));
+		} else {
+		    rewalk = false;
+		    GException ge = new TypeException(ErrorMessage.USER_MAIN_FUNCTION_INPUT_TYPES_UNDEFINED, param,
+			    param.name());
+		    functionNode.compilationUnit().addError(ge);
+		    //make program fail
+		    throw ge;
+		}
 	    }
-	}
 
-	if (rewalk) {
-	    // define function type and re-walk
-	    for (int k = 0; k < outputs.size(); ++k) {
-		funOutputs[k] = GType.get(BType.UNKNOWN);
-	    }
-	    // define function type
-	    functionNode.expr(GType.get(BType.FUNCTION, funInputs, funOutputs));
-	    functionalEntryPoint = functionName;
-	    // re-do walk on first compilation unit
-	    MiddleEndPass mainMiddleEnd = new FrontEndWalker(mainCompilationUnit);
-	    try {
-		mainMiddleEnd.annotate(stopOnError);
-	    } catch (GException e) {
-		mainCompilationUnit.addError(e);
-		unrecoverable_errors.add(e);
-		logger.debug("Error resolving types: " + e.getMessage(), e);
-		if (stopOnError)
-		    throw e;
+	    if (rewalk) {
+		// define function type and re-walk
+		for (int k = 0; k < outputs.size(); ++k) {
+		    funOutputs[k] = GType.get(BType.UNKNOWN);
+		}
+		// define function type
+		functionNode.expr(GType.get(BType.FUNCTION, funInputs, funOutputs));
+		functionalEntryPoint = functionName;
+		// re-do walk on first compilation unit
+		MiddleEndPass mainMiddleEnd = new FrontEndWalker(mainCompilationUnit);
+		try {
+		    mainMiddleEnd.annotate(stopOnError);
+		} catch (GException e) {
+		    mainCompilationUnit.addError(e);
+		    unrecoverable_errors.add(e);
+		    logger.debug("Error resolving types: " + e.getMessage(), e);
+		    if (stopOnError)
+			throw e;
+		}
 	    }
 	}
     }
