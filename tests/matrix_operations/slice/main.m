@@ -80,4 +80,16 @@ disp('six')
 a = 4 * a(a>1);
 disp(a);
 
+disp('slice assign test');
+r=[1 2 3 4; 5 6 7 8; 9 10 11 12];
+z=[1.1 2.1 3.1 4.1; 6.1 7.1 8.1 9.1];
+
+disp(r(1:2,:));
+
+disp(r(1:2:3,:));
+
+z=r(1:2:3,:);
+disp(z);
+
+
 disp(toc)
