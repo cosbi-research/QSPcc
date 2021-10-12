@@ -1,7 +1,7 @@
 # QSPcc Software Development Kit (SDK) overview
 
 The QSPcc Software Development Kit (SDK) is succintly outlined here, allowing developers to build new QSPcc modules as source/target languages. Every presented source class is commented in a way that should make straightforward its usage and meaning.
-You may also want to check if a GitHub [issue](https://github.com/cosbi-research/QSPcc/issues) has been filed, or get in touch with the Cosbi Bioinformatics lab led by lombardo@cosbi.eu. We'll be happy to help!
+You may also want to check if a GitHub [issue](https://github.com/cosbi-research/QSPcc/issues) has been filed, or get in touch with the [COSBI Bioinformatics lab](mailto:bioinformatics@cosbi.eu). We'll be happy to help!
 
 For a tour on how to contribute, please check out the [Contributing information](CONTRIBUTING.md).
 

@@ -104,7 +104,7 @@ The QSPcc Docker container provides all the features described in the paper. It 
 - [Hardware acceleration](https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/onemkl.html) by exploiting Intel MKL, a fast math library to further speed-up your matrix computations
 - [interoperability module](https://www.mathworks.com/help/matlab/import_export/supported-file-formats.html) ability to load/save using native MAT file format
 
-For help on this, adding new languages and other advanced features you may want to get in touch with the Cosbi Bioinformatics lab led by lombardo@cosbi.eu. We'll be happy to help!
+For help on this, adding new languages and other advanced features you may want to get in touch with the [COSBI Bioinformatics lab](mailto:bioinformatics@cosbi.eu). We'll be happy to help!
 
 
 # METHOD 2: Custom installation (technical)
@@ -291,7 +291,7 @@ Furthermore QSPcc can also automatically produce executables that can be run wit
 can exploit [hardware acceleration](https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/onemkl.html) by exploiting Intel MKL, 
 a fast math library to further speed-up your matrix computations, and can be interoperable with MATLAB with native support for [MAT](https://www.mathworks.com/help/matlab/import_export/supported-file-formats.html) files.
 
-Contact the COSBI Bioinformatics lab ( lombardo@cosbi.eu ) for these and other ready to use advanced features.
+Contact the [COSBI Bioinformatics lab](mailto:bioinformatics@cosbi.eu) for these and other ready to use advanced features.
 
 ## TRANSLATION
 
@@ -329,7 +329,7 @@ Additional options of interest are:
                                                    check the docs folder for info on the stylistic guidelines.
 ```
 
-Advanced options are available as custom extensions. Contact the COSBI Bioinformatics lab ( lombardo@cosbi.eu ) for other ready to use advanced features.
+Advanced options are available as custom extensions. Contact the [COSBI Bioinformatics lab](mailto:bioinformatics@cosbi.eu) for other ready to use advanced features.
 
 
 **Note**:The QSPcc command line is the same for both the Custom installation on your machines and the Docker image installation. The latter has only some additional Docker-related paramenters. 
@@ -387,7 +387,7 @@ For example the following command line will execute the pointwise operations in 
 $ OMP_NUM_THREADS=1 ./main
 ```
 
-Non-pointwise operations can be parallelized using the [hardware acceleration](https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/onemkl.html) module, a fast math library to parallelize matrix operations. Contact the COSBI Bioinformatics lab ( lombardo@cosbi.eu ) for further details.
+Non-pointwise operations can be parallelized using the [hardware acceleration](https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/onemkl.html) module, a fast math library to parallelize matrix operations. Contact the [COSBI Bioinformatics lab](mailto:bioinformatics@cosbi.eu) for further details.
 
 **NOTE:** OPENMP parallel instructions are not compatible with sundials LapackDense solver (enabled by `lapack_solver=on` make option).
 Remove `parfor` statements from your code if you plan to use lapack dense solver.
@@ -643,7 +643,7 @@ To bind custom C code (generated with QSPcc, or manually) with MATLAB, users sho
 Writing the MEX interface between C and MATLAB is generally complex because involves writing C code manually. 
 See the [complete mathworks guide](https://www.mathworks.com/help/matlab/call-mex-file-functions.html) on how to write a C/MEX file.
 
-We can help you to avoid this headache with a QSPcc module to automatically generate a MEX interface for you. Get in touch with the COSBI Bioinformatics lab ( lombardo@cosbi.eu ) for further informations.
+We can help you to avoid this headache with a QSPcc module to automatically generate a MEX interface for you. Get in touch with the [COSBI Bioinformatics lab](mailto:bioinformatics@cosbi.eu) for further informations.
 
 ## How does MATLAB ode solvers compare to QSPcc C translation?
 
@@ -730,14 +730,14 @@ There are some graphical functions (eg. figure(), legend(), etc.) that are cosme
 There are other functions whose effects are not cosmetic but critial to the correct execution. The good news is that the addition of a new functions can be as easy as writing the Matlab function to do the job. It is also possible leaveraging external C libraries (e.g. Sundials, etc..), or implementing ad-hoc algorithms. There are two options here:
 
 1. Try it for your self. You will *learn* how to do it and control all details. Concise, yet in-dept documentation is found [here](SDK_DEVELOPERS_GUIDE.md)
-2. Get in touch with the COSBI Bioinformatics lab led by lombardo@cosbi.eu where we'll be happy to help! Your learning will be reduced and of course we'll need to organize the process.
+2. Get in touch with the [COSBI Bioinformatics lab](mailto:bioinformatics@cosbi.eu) where we'll be happy to help! Your learning will be reduced and of course we'll need to organize the process.
 
 ## Can I use a language different from MATLAB (Python for example)?
 
 QSPcc is modular, if you need languages not supported yet, it's possible and documented how to add your own language. 
 There is a concise, yet in-dept documentation in the [Software Development Kit](SDK_DEVELOPERS_GUIDE.md) and in the code itself. 
 
-You may also want to get in touch with the COSBI Bioinformatics lab led by lombardo@cosbi.eu. We'll be happy to help!
+You may also want to get in touch with the [COSBI Bioinformatics lab](mailto:bioinformatics@cosbi.eu). We'll be happy to help!
 
 
 # Troubleshooting
@@ -875,5 +875,5 @@ The following general procedure to solve integration errors was distilled from h
    - re-compile, run and repeat this step 2. until you spot the issue.
 3. if you are not able to find a specific portion of the model that is misbehaving, type `make clean` and again `make` adding an extra option `sanitychecks=on`, e.g. `make sanitychecks=on`. Then use [gdb](https://www.gnu.org/software/gdb/) or [lldb](https://lldb.llvm.org/) to debug the C code. This is also the first option for segmentation faults or other C-specific errors. We were often on this point at the early development of QSPcc. This action is not on our regular procedure anymore as the QSPcc compiler gets more mature.
 
-If you still are in trouble we can help you. Get in touch with the COSBI Bioinformatics lab ( lombardo@cosbi.eu ) for further informations.
+If you still are in trouble we can help you. Get in touch with the [COSBI Bioinformatics lab](mailto:bioinformatics@cosbi.eu) for further informations.
 
