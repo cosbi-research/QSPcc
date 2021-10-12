@@ -2917,6 +2917,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		accessParameters.add(valueAsString);
 		indexes.add(null);
 		index_dim.add("1");
+		singleSlice = false;
 	    } else if (param.equals(BType.SCALAR)) {
 		// add cast and emit warning
 		TypeException ex = new TypeException(CErrorMessage.WARN_MATRIX_ACCESS_WITH_SCALAR, curApplyNode,
@@ -2935,12 +2936,14 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		indexes.add(null);
 		index_dim.add("1");
 		needsCast[n] = true;
+		singleSlice = false;
 		// end scalar types
 	    } else if (param.equals(BType.MATRIX_ACCESS_LAST)) {
 		plain_indexes.add(new Triple<String, String, String>(dims.get(n), "1", dims.get(n)));
 		accessParameters.add(dims.get(n));
 		indexes.add(null);
 		index_dim.add("1");
+		singleSlice = false;
 	    } else if (param.equals(BType.MATRIX_ACCESS_SLICE)) {
 		SliceType slicetype = ((SliceType) param);
 		Triple<GType, GType, GType> slices = slicetype.slices();
@@ -2979,7 +2982,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			    curApplyNode);
 		// if this is the only parameter we can optimize the access avoiding the
 		// expensive & generic sliceMatrix
-		singleSlice = paramTypes.size() == 1;
+		singleSlice = n == 0; // only if a(1:10,:,..,:)
 		contains_copy = true;
 	    } else if (GType.get(BType.MATRIX_ACCESS_ALL).equals(param)) {
 		if (n == paramTypes.size() - 1) {
@@ -3093,6 +3096,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		mat_num++;
 		plain_indexes.add(null);
 		contains_copy = true;
+		singleSlice = false;
 	    } else
 		throw new UndefinedTranslationException(CErrorMessage.UNSUPPORTED_MATRIX_ACCESS, curApplyNode);
 
@@ -3462,7 +3466,8 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		res.append(translatedInMatrix).append(STRUCT_ACCESS).append("matrix[").append(inAccess.toString())
 			.append("];").append(NL);
 	    }
-	} else if (singleSlice && outMatrixType != null && TypeUtils.realDims(outMatrixType.dims()).length == 1) {
+	} else if (singleSlice && outMatrixType != null) {
+	    // case a(2:10, :, : ..)
 	    // optimize as a single memcpy or as a single for depending on the step of the
 	    // slice
 	    Triple<String, String, String> slice = plain_indexes.get(0);
@@ -3477,7 +3482,12 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		}
 	    }
 
-	    if (memcpy && outStype.type().equals(stype.type())) {
+	    IntType[] idims = TypeUtils.realDims(outMatrixType.dims());
+	    boolean onedimmatrix = idims.length == 1;
+	    List<String> subDims = dims.subList(1, dims.size());
+	    String subDimsStr = Strings.join(subDims, '*');
+	    boolean inouttypeequal = outStype.type().equals(stype.type());
+	    if (memcpy && inouttypeequal) {
 		// the slice is continuous (step == 1) and in and out types are the same.
 		// -> we can use memcpy
 		/* memcpy */
@@ -3485,11 +3495,20 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		/* dest */
 		res.append(outMatrixSymbol).append(STRUCT_ACCESS).append("matrix ").append(", ");
 		/* src */
-		res.append(translatedInMatrix).append(STRUCT_ACCESS).append("matrix + ((int) ").append(slice.first())
-			.append(" - 1), ((int) ");
+		res.append(translatedInMatrix).append(STRUCT_ACCESS).append("matrix");
+		/* src start copying */
+		res.append(" + ((int) ").append(slice.first()).append(" - 1)");
+		if (!onedimmatrix)
+		    // start from 1, skip first dimension
+		    res.append(" * ").append(subDimsStr);
+		res.append(", ");
 		/* howmany */
-		res.append(slice.third() + " - " + slice.first()).append(" + 1) * sizeof(")
-			.append(exprTypeToCType(inMatrixType.of())).append("));").append(NL);
+		res.append("((int) ").append(slice.third() + " - " + slice.first()).append(" + 1)");
+		if (!onedimmatrix)
+		    // start from 1, skip first dimension
+		    res.append(" * ").append(subDimsStr);
+		/* single-element dimension */
+		res.append(" * sizeof(").append(exprTypeToCType(inMatrixType.of())).append("));").append(NL);
 	    } else {
 		// the slice is not continuous we should use a for loop
 		// optimize as a single for
@@ -3500,13 +3519,64 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		// res.append("#pragma omp parallel for if(" + String.join(" * ", outDims)
 		// + " > PARALLELIZABLE_FOR_TRESHOLD)").append(NL);
 		/* STARTS FROM 1 FOR COMPATIBILITY WITH ALL THE OTHER CASES */
-		res.append("#pragma omp smid").append(NL);
+		if (onedimmatrix)
+		    res.append("#pragma omp smid").append(NL);
 		res.append("for(" + outtype + " " + EXPR_INDEX + " = " + slice.first() + "; " + EXPR_INDEX + " <= "
 			+ slice.third() + " ; " + EXPR_INDEX + " += " + slice.second() + ")").append(NL);
-		res.append(TAB).append(outMatrixSymbol).append(STRUCT_ACCESS).append("matrix[").append(autoinc)
-			.append("++] = ").append("(").append(outtype).append(") ");
-		res.append(translatedInMatrix).append(STRUCT_ACCESS).append("matrix[(int) ").append(EXPR_INDEX)
-			.append(" - 1];").append(NL);
+
+		if (inouttypeequal) {
+		    if (onedimmatrix) {
+			res.append(TAB).append(outMatrixSymbol).append(STRUCT_ACCESS).append("matrix[").append(autoinc)
+				.append("++] = ").append("(").append(outtype).append(") ");
+			res.append(translatedInMatrix).append(STRUCT_ACCESS).append("matrix[(int) ").append(EXPR_INDEX)
+				.append(" - 1];").append(NL);
+		    } else {
+			res.append(TAB).append("memcpy(");
+			/* dest */
+			res.append(outMatrixSymbol).append(STRUCT_ACCESS).append("matrix");
+			res.append(" + ").append(autoinc).append("++");
+			res.append(" * ").append(subDimsStr);
+			res.append(", ");
+			/* src */
+			res.append(translatedInMatrix).append(STRUCT_ACCESS).append("matrix");
+			res.append(" + ((int) ").append(EXPR_INDEX).append(" - 1)");
+			res.append(" * ").append(subDimsStr);
+			res.append(", ");
+			/* howmany */
+			// 1 row
+			res.append(subDimsStr);
+			/* single-element dimension */
+			res.append(" * sizeof(").append(exprTypeToCType(inMatrixType.of())).append("));").append(NL);
+		    }
+		} else {
+		    /* add missing for one for each dimension */
+		    int d = 0;
+		    String counterPrefix = "_d";
+		    String[] accessPosition = new String[1 + subDims.size()];
+		    accessPosition[0] = "((int) " + EXPR_INDEX + " - 1) * " + translatedInMatrix + STRUCT_ACCESS
+			    + "poly_basis[0]";
+		    for (; d < subDims.size(); ++d) {
+			StringBuffer buf = new StringBuffer();
+			buf.append("for(int ").append(counterPrefix + Integer.toString(d)).append("=1; ");
+			buf.append(counterPrefix + Integer.toString(d)).append("<=").append(subDims.get(d)).append(";");
+			buf.append(counterPrefix + Integer.toString(d)).append("++");
+			buf.append(")").append(NL);
+
+			for (int t = 0; t < d + 1; ++t)
+			    res.append(TAB);
+			res.append(buf);
+			// flat matrix index
+			accessPosition[d + 1] = "(" + counterPrefix + Integer.toString(d) + "-1) * "
+				+ translatedInMatrix + STRUCT_ACCESS + "poly_basis[" + (d + 1) + "]";
+		    }
+		    for (int t = 0; t < d + 1; ++t)
+			res.append(TAB);
+		    res.append(outMatrixSymbol).append(STRUCT_ACCESS).append("matrix[").append(autoinc).append("++] = ")
+			    .append("(").append(outtype).append(") ");
+		    res.append(translatedInMatrix).append(STRUCT_ACCESS).append("matrix[")
+			    .append(String.join(" + ", accessPosition)).append("];").append(NL);
+
+		}
 	    }
 	} else {
 	    // initialize list of start/step/end
