@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/134552857.svg)](https://zenodo.org/badge/latestdoi/134552857)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5577946.svg)](https://doi.org/10.5281/zenodo.5577946)
 
 # QSPcc: Breaking through model simulation time limits
 
