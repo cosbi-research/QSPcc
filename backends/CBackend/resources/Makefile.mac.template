@@ -28,9 +28,9 @@ endif
 endif
 
 ifndef sanitychecks
-  CFLAGS   = -DMACOS -m64 -O2 -DNDEBUG -std=c99 -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -fno-common
+  CFLAGS   = -DMACOS -arch x86_64 -mmacosx-version-min=10.15 -m64 -O2 -DNDEBUG -std=c99 -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -fno-common
 else
-  CFLAGS   = -DMACOS -m64 -O0 -DDEBUG ${DEBUGFLAG} -std=c99 -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-common
+  CFLAGS   = -DMACOS -arch x86_64 -mmacosx-version-min=10.15 -m64 -O0 -DDEBUG ${DEBUGFLAG} -std=c99 -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-common
 endif
 
 ifdef dump
