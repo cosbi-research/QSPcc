@@ -169,10 +169,10 @@ public class TestBase {
 		+ extraparams);
 	try {
 	    c.translate(false, true, true, true);
+	    System.out.println("OK");
 	} catch (Exception e) {
 	    System.out.println("KO");
 	}
-	System.out.println("OK");
     }
 
     public void compileAndRunC(String execName, Path folderpath) throws IOException, InterruptedException {
