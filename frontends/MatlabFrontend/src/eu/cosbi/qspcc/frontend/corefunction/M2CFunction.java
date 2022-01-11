@@ -84,7 +84,6 @@ public enum M2CFunction implements IFunction {
 	    // return type
 	    GType.get(BType.VOID),
 	    // param types
-	    GType.get(BType.STRING),
 	    GType.get(BType.UNKNOWN)),
     // save to file
     CSVWRITE(
