@@ -685,23 +685,31 @@ public class AAST extends DAG<Program, AAST> implements ProgramNode, ProgramComp
      * @return
      */
     public List<AASTNode> localSymbols(AASTNode node) {
+	return symbols(node, node.name(), true);
+    }
+
+    public List<AASTNode> symbols(AASTNode node, String varname, boolean all) {
 	List<AASTNode> nodes = new LinkedList<AASTNode>();
 	AASTNode funNode = node.parent(NodeType.FUNCTION);
 	while (funNode != null) {
 	    String funName = funNode.child(NodeType.ID).name();
 	    if (localVariables.containsKey(funName)) {
 		Map<String, List<AASTNode>> functionLocalVariables = localVariables.get(funName);
-		if (functionLocalVariables.containsKey(node.name())) {
-		    List<AASTNode> curnodes = functionLocalVariables.get(node.name());
-		    if (curnodes != null)
+		if (functionLocalVariables.containsKey(varname)) {
+		    List<AASTNode> curnodes = functionLocalVariables.get(varname);
+		    if (curnodes != null) {
 			nodes.addAll(curnodes);
+			if (!all)
+			    // we don't want all nodes, we need just the first set
+			    break;
+		    }
 		} // otherwise check in static variables...
 	    }
 	    // check in enclosing function
 	    funNode = funNode.parent(NodeType.FUNCTION);
 	}
-	if (staticVariables.containsKey(node.name())) {
-	    List<AASTNode> curnodes = staticVariables.get(node.name());
+	if (staticVariables.containsKey(varname)) {
+	    List<AASTNode> curnodes = staticVariables.get(varname);
 	    if (curnodes != null)
 		nodes.addAll(curnodes);
 	}
