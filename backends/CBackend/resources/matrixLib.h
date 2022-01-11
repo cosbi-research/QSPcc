@@ -470,10 +470,10 @@ extern void sdContainedInArray(int n, double *input, double start, double step, 
 extern void sdContainedInSlice(double inputStart, double inputStep, double inputEnd, double start, double step, double end, int *output);
 
 //inverts the order in the flattened array of a matrix from row-major to column-major
-extern void turnIntoColumnMajor(void* pointer, void* output, size_t size, int dimNumber, int *dimensions);
-extern void turnIntoRowMajor(void* pointer, void* output, size_t size, int dimNumber, int *dimensions);
+extern void turnIntoColumnMajor(void* pointer, void* output, size_t size, int dimNumber, size_t *dimensions);
+extern void turnIntoRowMajor(void* pointer, void* output, size_t size, int dimNumber, size_t *dimensions);
 extern void viReshape(int* pointer, int* output, int originalDimensionNum, int totalDimensionNum, ...);
-extern void viReshapeAlgorithm(int *pointer, int *output, int originalTotNum, int *originalDimensions, int originalDimensionNum, int *outputDimensions, int outputDimensionNum);
+extern void viReshapeAlgorithm(int *pointer, int *output, int originalTotNum, size_t *originalDimensions, int originalDimensionNum, size_t *outputDimensions, int outputDimensionNum);
 extern void siReshape(int* output, int start, int end, int step, int outputDimensionNum, ...);
 // utilities to convert flat rowmajor index to colmajor and viceversa
 // -------------- POINTER POSITION INVERTER --------------------------
@@ -502,7 +502,7 @@ static inline int colMajor2RowMajor(int flatIdx, int dim1, int dim2){
 }
 
 extern void vdReshape(double* pointer, double* output, int originalDimensionNum, int totalDimensionNum, ...);
-extern void vdReshapeAlgorithm(double *pointer, double *output, int originalTotNum, int *originalDimensions, int originalDimensionNum, int *outputDimensions, int outputDimensionNum);
+extern void vdReshapeAlgorithm(double *pointer, double *output, int originalTotNum, size_t *originalDimensions, int originalDimensionNum, size_t *outputDimensions, int outputDimensionNum);
 extern void sdReshape(double* output, double start, double end, double step, int outputDimensionNum, ...);
 
 //sum cumulatively matrix elements
