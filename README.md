@@ -193,7 +193,7 @@ This will install the repository version.
 
 #### Installation from tar file (Linux and MacOS)
 
-In the [Sundials website](https://computation.llnl.gov/projects/sundials/sundials-software), scroll down to "Software Releases" and from the list download the CVODE package. At the time of writing the latest version is `CVODE 5.7.0`. Note in the list there are also packages `SUNDIALS xxx` and `CVODES xxx`, which are _not_ of interest here.
+In the [Sundials website](https://computing.llnl.gov/projects/sundials/sundials-software), scroll down to "Software Releases" and from the list download the CVODE package. At the time of writing the latest version is `CVODE 5.7.0`. Note in the list there are also packages `SUNDIALS xxx` and `CVODES xxx`, which are _not_ of interest here.
 Unzip the tar file. 
 
 This is a quick outline of the process on linux, for a administrator user:
