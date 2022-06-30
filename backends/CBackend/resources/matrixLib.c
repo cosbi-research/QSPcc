@@ -2426,13 +2426,13 @@ void viReshape(int* pointer, int* output, int originalDimensionNum, int totalDim
 
 	int outputDimensionNum = totalDimensionNumber-originalDimensionNum;
 
-	int originalDimensions[originalDimensionNum];
+	size_t originalDimensions[originalDimensionNum];
 	for(int i = 0 ; i < originalDimensionNum ; ++i ){
-		originalDimensions[i] = va_arg(vl,int);
+	        originalDimensions[i] =  va_arg(vl,size_t);
 	}
-	int outputDimensions[outputDimensionNum];
+	size_t outputDimensions[outputDimensionNum];
 	for(int i = originalDimensionNum ; i < outputDimensionNum+originalDimensionNum ; ++i ){
-		outputDimensions[i-originalDimensionNum] = va_arg(vl,int);
+		outputDimensions[i-originalDimensionNum] = va_arg(vl,size_t);
 	}
 	
  	//check if the number of element of the original vector is compatible with the output one
@@ -2451,7 +2451,7 @@ void viReshape(int* pointer, int* output, int originalDimensionNum, int totalDim
 	viReshapeAlgorithm(pointer, output, originalTotNum, originalDimensions, originalDimensionNum, outputDimensions, outputDimensionNum);
 }
 
-void viReshapeAlgorithm(int *pointer, int *output, int originalTotNum, int *originalDimensions, int originalDimensionNum, int *outputDimensions, int outputDimensionNum){
+void viReshapeAlgorithm(int *pointer, int *output, int originalTotNum, size_t *originalDimensions, int originalDimensionNum, size_t *outputDimensions, int outputDimensionNum){
  	//if the original dimensions are just one, we don't have to do nothing
 	#ifdef ROWMAJOR
  	int temp[originalTotNum];
@@ -2477,9 +2477,9 @@ void siReshape(int* output, int start, int end, int step, int outputDimensionNum
 	
 	va_list vl;
 	va_start(vl, outputDimensionNum);
-	int outputDimensions[outputDimensionNum];
+	size_t outputDimensions[outputDimensionNum];
 	for(int i = 0 ; i < outputDimensionNum ; ++i ){
-		outputDimensions[i] = va_arg(vl,int);
+		outputDimensions[i] = va_arg(vl,size_t);
 	}
 
 	int totalDimension = viSequenceDimension(start, step, end);
@@ -2496,7 +2496,7 @@ void siReshape(int* output, int start, int end, int step, int outputDimensionNum
 }
 
 //turns a row-major expressed matrix into a column major expressed one
-void turnIntoColumnMajor(void* pointer, void* output, size_t size, int dimNumber, int *dimensions){
+void turnIntoColumnMajor(void* pointer, void* output, size_t size, int dimNumber, size_t *dimensions){
 	
 	//get all the element number
  	int totNum = 1;
@@ -2527,7 +2527,7 @@ void turnIntoColumnMajor(void* pointer, void* output, size_t size, int dimNumber
 }
 
 //turns a column-major expressed matrix into a row-major expressed one
-void turnIntoRowMajor(void* pointer, void* output, size_t size, int dimNumber, int *dimensions){
+void turnIntoRowMajor(void* pointer, void* output, size_t size, int dimNumber, size_t *dimensions){
 
 	//get all the element number
  	int totNum = 1;
@@ -2566,13 +2566,13 @@ void vdReshape(double* pointer, double* output, int originalDimensionNum, int to
 
 	int outputDimensionNum = totalDimension - originalDimensionNum;
 
-	int originalDimensions[originalDimensionNum];
+	size_t originalDimensions[originalDimensionNum];
 	for(int i = 0 ; i < originalDimensionNum ; ++i ){
-		originalDimensions[i] = va_arg(vl,int);
+		originalDimensions[i] = va_arg(vl,size_t);
 	}
-	int outputDimensions[outputDimensionNum];
+	size_t outputDimensions[outputDimensionNum];
 	for(int i = originalDimensionNum ; i < outputDimensionNum+originalDimensionNum ; ++i ){
-		outputDimensions[i-originalDimensionNum] = va_arg(vl,int);
+		outputDimensions[i-originalDimensionNum] = va_arg(vl,size_t);
 	}
 	
 	
@@ -2592,7 +2592,7 @@ void vdReshape(double* pointer, double* output, int originalDimensionNum, int to
 	vdReshapeAlgorithm(pointer, output, originalTotNum, originalDimensions, originalDimensionNum, outputDimensions, outputDimensionNum);
 }
 
-void vdReshapeAlgorithm(double *pointer, double *output, int originalTotNum, int *originalDimensions, int originalDimensionNum, int *outputDimensions, int outputDimensionNum){
+void vdReshapeAlgorithm(double *pointer, double *output, int originalTotNum, size_t *originalDimensions, int originalDimensionNum, size_t *outputDimensions, int outputDimensionNum){
  	#ifdef ROWMAJOR
  	double temp[originalTotNum];
  	if(originalDimensionNum <= 1){
@@ -2620,9 +2620,9 @@ void sdReshape(double* output, double start, double end, double step, int output
 	va_list vl;
 	va_start(vl, outputDimensionNum);
 
-	int outputDimensions[outputDimensionNum];
+	size_t outputDimensions[outputDimensionNum];
 	for(int i = 0 ; i < outputDimensionNum ; ++i ){
-		outputDimensions[i] = va_arg(vl,int);
+		outputDimensions[i] = va_arg(vl,size_t);
 	}
 	
 	int flatIdx=0;
