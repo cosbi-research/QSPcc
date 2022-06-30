@@ -3075,6 +3075,7 @@ double dInterp(double* xValues, int xValuesLen, double* yValues, int yValuesLen,
 
 void vdInterp(double *yValuesInterp, double* xValues, int xValuesLen, double* yValues, int yValuesLen, double* xsToBeInterpolated, int xsDim){
 	int i = 0;
+	#pragma omp smid
 	for(i = 0; i < xsDim ; ++i)
 		yValuesInterp[i] = dInterp(xValues, xValuesLen, yValues, yValuesLen, xsToBeInterpolated[i]);
 }
