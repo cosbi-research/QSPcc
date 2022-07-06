@@ -12,6 +12,10 @@
 #include <sunlinsol/sunlinsol_pcg.h> /* access to SPTFQMR SUNLinearSolver */
 #endif
 
+#if QSPCC_SUNDIALS_VERSION == 6
+#include <sundials/sundials_context.h>
+#endif
+
 extern void __wrap_matrix_function(double*(*fn)(double t, double *y, int y_dim1, int y_dim2), realtype t, N_Vector y, N_Vector ydot, void *user_data);
 extern void __wrap_scalar_function(double(*fn)(double t, double *y, int y_dim1, int y_dim2), realtype t, N_Vector y, N_Vector ydot, void *user_data);
 
@@ -95,6 +99,9 @@ typedef struct SUNDIALS_INITIALIZER
 #if QSPCC_SUNDIALS_VERSION > 2
     SUNMatrix matrix;
     SUNLinearSolver linearsolver;
+#endif
+#if QSPCC_SUNDIALS_VERSION == 6
+    SUNContext sunctx;
 #endif
 } SUN_INIT;
 

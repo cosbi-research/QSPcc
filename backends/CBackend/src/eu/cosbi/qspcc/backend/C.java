@@ -84,7 +84,7 @@ import eu.cosbi.utils.TypeUtils;
 
 @BackendModule(name = "c")
 @CliOptions({
-	@CliOption(opt = C.SUN_VER_OPTION, longOpt = "sundials-version", hasArg = true, description = "Sundials major version to be used by the translated program. Supported values are 2,3,4,5. Default is '5'", argName = "VERSION", required = false),
+	@CliOption(opt = C.SUN_VER_OPTION, longOpt = "sundials-version", hasArg = true, description = "Sundials major version to be used by the translated program. Supported values are 2,3,4,5,6. Default is '6'", argName = "VERSION", required = false),
 	@CliOption(opt = C.SUN_INCLUDE, longOpt = "sundials-include-path", hasArg = true, description = "The include path for the local installation of the Sundials library. default: /usr/local/include", argName = "INCLUDE-PATH", required = false),
 	@CliOption(opt = C.SUN_LIB, longOpt = "sundials-lib-path", hasArg = true, description = "The path to the library files (.so, .a, .dynlib) for the local installation of the Sundials library. default: /usr/local/lib", argName = "LIB-PATH", required = false),
 	@CliOption(opt = C.STD_LIB, longOpt = "std-lib-path", hasArg = true, description = "The path to the library files (.so, .a, .dynlib) for zlib and other standard libraries. default: /usr/lib", argName = "LIB-PATH", required = false),
@@ -96,11 +96,11 @@ import eu.cosbi.utils.TypeUtils;
 public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, String>, MainCode {
     private Logger logger = LogManager.getLogger(C.class);
     public static final String SUN_VER_OPTION = "sunver";
-    public static String defaultSunVer = "5";
+    public static String defaultSunVer = "6";
     public static final String SUN_LIB = "sunlib";
-    public static Path defaultSunLibPath = Paths.get("/usr", "local", "sundials-5.7.0", "lib");
+    public static Path defaultSunLibPath = Paths.get("/usr", "local", "sundials-6.2.0", "lib");
     public static final String SUN_INCLUDE = "suninclude";
-    public static Path defaultSunPath = Paths.get("/usr", "local", "sundials-5.7.0", "include");
+    public static Path defaultSunPath = Paths.get("/usr", "local", "sundials-6.2.0", "include");
     public static final String STD_LIB = "stdlib";
     public static Path defaultStdLibPath = Paths.get("/usr", "lib");
     public static final String NONSYMM_SPARSE_LINEAR_PROBLEM = "slm";
