@@ -805,7 +805,7 @@ The following valid MATLAB constructs were not fully supported in QSPcc, and wil
 - [Omission of leading zeros not supported](#omission-of-leading-zeros-not-supported)
 - [Matrices with negative values have to be comma-separated](#matrices-with-negative-values-have-to-be-comma-separated)
 - [tilde sign `~` not supported as an assignment variable](#tilde-sign--not-supported-as-an-assignment-variable)
-
+- [Stack smashing detected](#stack-smashing-detected)
 
 ### Negative exponentiation without parenthesis
 
@@ -874,6 +874,20 @@ The following general procedure to solve integration errors was distilled from h
    - If you still have no clues about the equations that are misbehaving, you can always enable/disable portions of the code in a [dichotomic search](https://en.wikipedia.org/wiki/Dichotomic_search) using conditional code in your model to isolate the portion that is causing the anomaly. We have found that this often leads to pinpointing portions of the Matlab model that are still experimental, under development, or not completely refined. As described in the QSPcc's supplementary file, we found a model that Matlab is able to keep simulating with a large number of NAs in the dynamics.
    - re-compile, run and repeat this step 2. until you spot the issue.
 3. if you are not able to find a specific portion of the model that is misbehaving, type `make clean` and again `make` adding an extra option `sanitychecks=on`, e.g. `make sanitychecks=on`. Then use [gdb](https://www.gnu.org/software/gdb/) or [lldb](https://lldb.llvm.org/) to debug the C code. This is also the first option for segmentation faults or other C-specific errors. We were often on this point at the early development of QSPcc. This action is not on our regular procedure anymore as the QSPcc compiler gets more mature.
+
+## Stack smashing detected
+
+If you experience almost immediately the following error message
+
+```
+*** stack smashing detected ***: <unknown> terminated
+Aborted (core dumped)
+```
+
+Maybe you are trying to use OPENMP parallel instructions (the QSPcc C translation for the MATLAB parfor) together with the LAPACK solver (lapack\_solver=on option).
+Those two options together are not compatible.
+Remove `parfor` statements from your code if you plan to use lapack dense solver.
+
 
 If you still are in trouble we can help you. Get in touch with the [COSBI Bioinformatics lab](mailto:bioinformatics@cosbi.eu) for further informations.
 
