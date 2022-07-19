@@ -4298,6 +4298,12 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 				} else if (rMatrixTypeDimensions.length == 1)
 					// if 1d matrix it's more convenient to access directly as a flat array
 					rhsPos.append(counterToBeUsed.get(0)).append("-1");
+				else if(counterToBeUsed.size() == 0)
+					// expected to have some indices to access a non-vector matrix (at least nxn)
+					// but none available.
+					// this is probably an error in the type identification of the RHS upstream
+					throw new TypeException(CErrorMessage.INTERNAL_MISMATCHED_MATRIX_ACCESS, 
+							rhsNode, rhsNode.code());
 				else {
 					// if nd matrix but just 1 counter use it as flat access
 					// assume source program uses colmajor
