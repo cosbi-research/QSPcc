@@ -790,8 +790,29 @@ In C both y1 and m1 do have the same value (because they share the same memory).
 
 To avoid this situation simply rename the output variable to something different than y, so that the input values won't be changed.
 
-The same problem may also appear in a script, where a variable is used many times in different contexts, sometimes as a matrix, and sometimes as a scalar.
-To avoid ambiguities and translation problems we strongly reccommend to use different name variables for objects with different types.
+The same problem may also appear in a script, where a variable is used many times in different contexts, sometimes as a matrix, and sometimes as a scalar. 
+
+In the following example, the variables `x` and `y` are used first as scalars, then as matrices (as a result of the ode45 call, and as input in the cvAdvDiff integrand function):
+
+```
+x0=zeros(MX*MY,1);
+for i=1:MX
+	for j=1:MY
+		x = (i + 1) * dx; % x location
+		y = (j + 1) * dy; % y location
+		x0(i * MY + j) = x * (xmax - x) * y * (ymax - y) * exp(5.0*x*y);
+	end
+end
+
+tspan=[0:0.1:1.0];
+opts = odeset('AbsTol',1e-6,'RelTol',1e-3);
+[t,x]=ode45(@(t,y) cvAdvDiff(t, y, MX, MY, hdcoef, hacoef, vdcoef), tspan, x0, opts);
+```
+
+
+To avoid such ambiguities and translation problems we strongly reccommend to use different name variables for objects with different types.
+
+This is needed also because C is statically typed, and this requires that the same name always have the same type (scalar, or matrix, not both in the same context).
 
 Avoid reusing the same name for different variables, is also a good coding practice and improves readability.
 
