@@ -216,10 +216,6 @@ public enum CErrorMessage implements ErrorCode {
 	     * params[1]: formal return type
 	     * params[2]: expected return type
 	     */
-	case INTERNAL_MISMATCHED_MATRIX_ACCESS:
-	    /**
-	     * happens when accessing a matrix with a wrong number/type of indexes
-	     */
 	case INTERNAL_ASSIGN_INCOMPATIBLE_TYPES:
 	    /**
 	     * happens when the lhs is incompatible with rhs
@@ -252,6 +248,17 @@ public enum CErrorMessage implements ErrorCode {
 				Constants.programName,
 				ordinal(),
 				sdk_info
+		);
+	break;
+	case INTERNAL_MISMATCHED_MATRIX_ACCESS:
+	    /**
+	     * happens when accessing a matrix with a wrong number/type of indexes
+	     */
+	    ret = String.format(
+				"%s error %s: Using Matrix as a Scalar or vice-versa.\n%s",
+				Constants.programName,
+				ordinal(),
+				"This is probably due to variables re-use, see: "+ErrorMessage.getReuseSameVarErrorLink(node)
 		);
 	break;
 	case INTERNAL_APPLY_TO_NON_MATRIX:

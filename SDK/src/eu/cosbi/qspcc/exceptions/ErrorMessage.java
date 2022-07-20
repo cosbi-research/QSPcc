@@ -181,7 +181,7 @@ public enum ErrorMessage implements ErrorCode {
     }
 
     public static String getSDKLink(ProgramNode node) {
-	return "https://git.io/JGYA8";
+	return "https://tinyurl.com/56fzxrp2";
     }
 
     public static String getSyntaxInfo(ProgramNode node) {
@@ -190,6 +190,10 @@ public enum ErrorMessage implements ErrorCode {
 
     public static String getSyntaxErrorsLink(ProgramNode node) {
 	return "https://git.io/JnZXV";
+    }
+
+    public static String getReuseSameVarErrorLink(ProgramNode node) {
+	return "https://tinyurl.com/3ck6pmm9";
     }
 
     public static String getSDKInfo(ProgramNode node) {
