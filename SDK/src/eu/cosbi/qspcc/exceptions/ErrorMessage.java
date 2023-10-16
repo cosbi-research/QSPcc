@@ -447,7 +447,7 @@ public enum ErrorMessage implements ErrorCode {
 			    }
 			}
 		    }
-
+ 
 		    // store messages in order from inner-most to outer-most
 		    if (onlyErrors)
 			errorMessages.add(new Tuple<>(icomp, msg.toString()));
@@ -843,6 +843,13 @@ public enum ErrorMessage implements ErrorCode {
 				    // ERROR message arguments
 				params[0] // parameter code
 		);
+	    // override location definition
+	    StringBuffer l = new StringBuffer();
+	    AASTNode n = (AASTNode) node;
+	    ProgramNode p = n.child(NodeType.ID);
+		l.append("in function '").append(p.code()).append("'");
+	    l.append("\n");
+	    location = l.toString();
 	break;
 	}
 	case FUN_ENV_PARAM_NEVER_DEFINED:{

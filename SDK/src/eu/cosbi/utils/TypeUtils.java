@@ -1604,6 +1604,7 @@ public class TypeUtils {
 	List<AASTNode> formalParametersUnknown = new ArrayList<>(formalParameterTypes.size());
 	List<AASTNode> actualParametersUnknown = new ArrayList<>(formalParameterTypes.size());
 	List<AASTNode> actualEnvParametersUnknown = new ArrayList<>(formalParameterTypes.size());
+	AASTNode actualParamUnknown = null;
 	for (int i = 0; i < formalParameterTypes.size(); ++i) {
 	    GType formalParam = formalParameterTypes.get(i);
 
@@ -1630,7 +1631,24 @@ public class TypeUtils {
 		    // core functions often only have 1 formal parameter
 		    formalParametersUnknown
 			    .add(TypeUtils.getIDNode(functionFormalParams.get(functionFormalParams.size() - 1)));
+	    }else {
+	    	// check if actual parameter is unknown
+	    	if (i < functionActualParams.size()) {
+	    		GType actualType = actualParameterTypes.get(i);
+				AASTNode actualParam = functionActualParams.get(i);
+			    if ((actualType == null || actualType.equals(BType.UNKNOWN)) && actualParamUnknown == null) {
+			    	actualParamUnknown = actualParam;
+			    }
+	    	}
 	    }
+	}
+	
+	applyNode.clearDeferrableError(ErrorMessage.FUN_PARAMETER_UNDEFINED);
+	if(actualParamUnknown!=null) {
+		// record that this function, has an actual parameter undefined (even if the function itself is fully-defined)
+		TypeException ex = new TypeException(ErrorMessage.FUN_PARAMETER_UNDEFINED, applyNode, actualParamUnknown.name(),
+				functionNode.child(NodeType.ID).name());
+		applyNode.deferrableError(ErrorMessage.FUN_PARAMETER_UNDEFINED, ex);
 	}
 
 	if (formalParametersUnknown.isEmpty()) {
