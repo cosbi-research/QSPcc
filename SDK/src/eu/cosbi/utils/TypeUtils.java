@@ -529,7 +529,10 @@ public class TypeUtils {
 	GType expr = null;
 	BType rexprtype = null;
 	boolean outSparse = false;
-	if (matrixLeftDims.length == 1 && matrixRightDims.length == 1) {
+	if(lexpr.equals(BType.MATRIX_ACCESS_SLICE) && rexpr.equals(BType.MATRIX_ACCESS_SLICE)) {
+		throw new TypeException(ErrorMessage.UNSUPPORTED_MATRIX_MATRIX_OPERATION_BETWEEN_INCOMPATIBLE_MATRICES,
+				node, lexpr, rexpr);
+	}else if (matrixLeftDims.length == 1 && matrixRightDims.length == 1) {
 	    // and thanks to prev checks also right
 	    // has same dimension
 	    if (node.type().equals(NodeType.TIMES))
@@ -545,7 +548,8 @@ public class TypeUtils {
 	    IntType rldim = (IntType) GType.get(matrixRightDims[0]);
 	    IntType rdim = (IntType) GType.get(matrixRightDims[1]);
 	    // mxn times nxk -> mxk
-	    if (node.type().equals(NodeType.TIMES) && ldim.hasValue() && ldim.valueAsInt() == 1 && rdim.hasValue()
+	    if (node.type().equals(NodeType.TIMES)  
+	    	&& ldim.hasValue() && ldim.valueAsInt() == 1 && rdim.hasValue()
 		    && rdim.valueAsInt() == 1)
 		// 2d but in fact they are 1D (mx1 or 1xn)
 		expr = updateScalarVectorType(lexpr.of(), rexpr.of().type());
@@ -1095,8 +1099,10 @@ public class TypeUtils {
 	    // actual param type
 	    GType actualptype = actualParam.expr();
 	    if (actualptype != null
+	    	// if core function, it's types doesn't need to be resolved
+		    && !actualParam.hasAttr(NodeAttr.REF_CORE_FUNCTION) 
 		    && (actualptype.equals(BType.FUNCTION) || actualParam.hasAttr(NodeAttr.REF_FUNCTION))) {
-		if (!actualParam.type().equals(NodeType.FUNCTION) && !actualParam.hasAttr(NodeAttr.REF_FUNCTION)) {
+		if (   !actualParam.type().equals(NodeType.FUNCTION) && !actualParam.hasAttr(NodeAttr.REF_FUNCTION)) {
 		    TypeException ex = new TypeException(ErrorMessage.INTERNAL_FUN_FUNCTIONAL_PARAM_DONT_MATCH,
 			    applyNode, funNode.child(NodeType.ID).name(), actualParam);
 		    String msg = ex.stringify();
@@ -1115,6 +1121,7 @@ public class TypeUtils {
 		    // propagate type
 		    actualFunNode.exprs(types, false);
 		}
+		
 		List<AASTNode> returnChilds = actualFunNode.childs(NodeType.FUNCTION_RETURN);
 		if (returnChilds.size() != actualFunType.outputs().size()) {
 		    TypeException ex = new TypeException(ErrorMessage.FUN_FUNCTIONAL_PARAM_N_RETURN_VALUES_DONT_MATCH,
@@ -1155,7 +1162,7 @@ public class TypeUtils {
 		    if (!actualFunEnvParams.contains(p))
 			actualFunParams.add(p);
 
-		if (formalFunType.inputs().size() != actualFunParams.size()) {
+		if (formalFunType.inputs().size() != actualParamChilds.size()) {
 		    TypeException ex = new TypeException(ErrorMessage.FUN_FUNCTIONAL_PARAM_N_PARAM_VALUES_DONT_MATCH,
 			    applyNode, funNode.child(NodeType.ID).name(), actualFunNode.child(NodeType.ID).name(),
 			    actualParamChilds.size(), formalFunType.inputs().size());
@@ -1612,10 +1619,10 @@ public class TypeUtils {
 		if (i < functionActualParams.size()) {
 		    AASTNode actualParam = functionActualParams.get(i);
 
-		    if (!actualParam.hasAttr(NodeAttr.IS_FUNCTION_ENV_PARAM))
+		    //if (!actualParam.hasAttr(NodeAttr.IS_FUNCTION_ENV_PARAM))
 			// don't print that unknown function param is unknown
 			// because it's misleading for the user. The problem is somewhere else
-			continue;
+			//continue;
 
 		    actualParametersUnknown.add(actualParam);
 		    actualEnvParametersUnknown.add(null);
