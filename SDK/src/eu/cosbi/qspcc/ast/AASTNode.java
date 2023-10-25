@@ -448,7 +448,10 @@ public class AASTNode extends DAG<AAST, AASTNode> implements ProgramNode {
     }
 
     public IFunction coreFunction() {
-	return (IFunction) attributes.get(NodeAttr.CORE_FUNCTION);
+	IFunction ret = (IFunction) attributes.get(NodeAttr.CORE_FUNCTION);
+	if(ret==null)
+		ret = (IFunction) attributes.get(NodeAttr.REF_CORE_FUNCTION);
+	return ret;
     }
 
     @Override
