@@ -28,6 +28,7 @@ import eu.cosbi.qspcc.expressions.type.FunctionType;
 import eu.cosbi.qspcc.expressions.type.GType;
 import eu.cosbi.qspcc.expressions.type.TypeDefinition.BType;
 import eu.cosbi.qspcc.interfaces.CompilerBackend;
+import eu.cosbi.qspcc.interfaces.CompilerFrontend.IFunction;
 import eu.cosbi.qspcc.interfaces.MiddleEndPass;
 import eu.cosbi.qspcc.interfaces.annotations.StatementClass;
 import eu.cosbi.qspcc.statements.AssignStatement;
@@ -214,21 +215,24 @@ public class FrontEndWalker implements DAGListener<AAST, AASTNode, Object>, Midd
 		    genericTranslateStart(node, node.name());
 		break;
 	    case AT:
-		functionNode = node;
-		if (!node.hasAttr(NodeAttr.REF_FUNCTION) || node.attr(NodeAttr.REF_FUNCTION) == null)
+		if (!node.hasAttr(NodeAttr.REF_CORE_FUNCTION) && (!node.hasAttr(NodeAttr.REF_FUNCTION) || node.attr(NodeAttr.REF_FUNCTION) == null))
 		    throw new UndefinedTranslationException(
 			    ErrorMessage.INTERNAL_ANONYMOUS_FUNCTION_NODE_WITHOUT_REFERENCE_FUNCTION, node,
 			    node.child(NodeType.ID).name());
-		anonFunctionDefinition = true;
-		// if inside an anonymous function definition
-		String functionName = (String) functionNode.attr(NodeAttr.SYMBOL);
-		// save node from which we should restart the translation after
-		// a
-		// function definition has been found
-		restartTranslationFrom = findRestartNode(node, NodeType.AT);
-		beginFunctionBody(node, functionNode, functionName, outputSymbols, params);
-		logger.debug(" ---- BEGIN ANONYMOUS FUNCTION PARAMETER NAMES IDENTIFICATION ---- ");
-		// }
+		if(!node.hasAttr(NodeAttr.REF_CORE_FUNCTION)) {
+			functionNode = node;
+			anonFunctionDefinition = true;
+			// if inside an anonymous function definition
+			String functionName = (String) functionNode.attr(NodeAttr.SYMBOL);
+			// save node from which we should restart the translation after
+			// a
+			// function definition has been found
+			restartTranslationFrom = findRestartNode(node, NodeType.AT);
+			beginFunctionBody(node, functionNode, functionName, outputSymbols, params);
+			logger.debug(" ---- BEGIN ANONYMOUS FUNCTION PARAMETER NAMES IDENTIFICATION ---- ");			
+		}else
+			// this is a core function reference, skip.
+			genericTranslateStart(node, node.name());
 		break;
 
 	    case LHS:

@@ -205,7 +205,16 @@ public class VariablesWalker implements DAGListener<AAST, AASTNode, Object>, Mid
 		    funNode = node.child(NodeType.APPLY).child(NodeType.ID);
 		String referencedFunName = funNode.name();
 		AASTNode referencedFun = funNodes.get(referencedFunName);
-		node.attr(NodeAttr.REF_FUNCTION, referencedFun);
+		IFunction referencedCoreFun=null;
+		if(referencedFun==null) {
+		    for (IFunction fun : coreFunctions)
+		    	if (fun.getName().toLowerCase().equals(referencedFunName.toLowerCase())) {
+		    		referencedCoreFun = fun;
+				    break;
+				}
+			node.attr(NodeAttr.REF_CORE_FUNCTION, referencedCoreFun);
+		}else
+			node.attr(NodeAttr.REF_FUNCTION, referencedFun);
 	    }
 	    break;
 	default:
