@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 
@@ -359,7 +360,7 @@ public class ExpressionStatement extends Statement {
 		    }
 
 		} else {
-		    List<GType> types = nearestSymbolTypes(node);
+		    List<GType> types = nearestSymbolTypes(node, BType.UNKNOWN);
 		    if (existsPreviousNodeType(NodeType.APPLY, 1))
 			node.attr(NodeAttr.CALLABLE, true);
 
@@ -1334,8 +1335,15 @@ public class ExpressionStatement extends Statement {
 			    || node.type().equals(NodeType.MINUS);
 		    boolean matrix_op = node.type().equals(NodeType.TIMES) || node.type().equals(NodeType.LEFTDIV)
 			    || node.type().equals(NodeType.RIGHTDIV);
-		    if (pointwise_op || (matrix_op && TypeUtils.isDegeneratedMatrix(dlexpr)
-			    && TypeUtils.isDegeneratedMatrix(drexpr))) {
+		    if (pointwise_op 
+		    	|| (matrix_op 
+		    		&& (   (TypeUtils.isDegeneratedMatrix(dlexpr) && TypeUtils.isDegeneratedMatrix(drexpr))
+		    		    || (TypeUtils.isDegeneratedMatrix(dlexpr) && drexpr.equals(BType.MATRIX_ACCESS_SLICE))
+		    		    || (dlexpr.equals(BType.MATRIX_ACCESS_SLICE) && TypeUtils.isDegeneratedMatrix(drexpr))
+		    		    || (dlexpr.equals(BType.MATRIX_ACCESS_SLICE) && drexpr.equals(BType.MATRIX_ACCESS_SLICE))
+		    			)
+		    		)
+		    	) {
 			GType outType = TypeUtils.resultingTypeMatrixMatrixPointwiseOp(node, dlexpr, drexpr);
 			node.expr(outType);
 			node.symbol(outType.name());
