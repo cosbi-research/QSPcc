@@ -771,7 +771,7 @@ public enum ErrorMessage implements ErrorCode {
 	     *           can point to a env parameter, because env parameters are dynamically added on the fly)
 	     * param[1]: Unrecognized actual parameters (null if env param)
 	     * param[2]: Unrecognized actual env parameters (null if param)
-	     * param[3]: function si a core function? if not null
+	     * param[3]: function is a core function? if not null
 	     * param[4]: function name
 	     */
 	    List<AASTNode> undefFormalParams = (List<AASTNode>) params[0];
@@ -1570,7 +1570,7 @@ public enum ErrorMessage implements ErrorCode {
 	     * param[0]: function name
 	     */
 	    ret = String.format(
-				"%s error %s: This is not a fault in your code.\n%s",
+				"%s error %s: \n%s",
 				Constants.programName,
 				ordinal(),
 				getSDKInfo(node)
