@@ -1869,6 +1869,31 @@ public class ExpressionStatement extends Statement {
 
 	    return node;
 	}
+	case AT:{
+		GType[] inputs=null;
+		GType[] outputs=null;
+		AASTNode idNode = popTranslation();
+		if(!node.hasAttr(NodeAttr.REF_CORE_FUNCTION) && (!node.hasAttr(NodeAttr.REF_FUNCTION) || node.attr(NodeAttr.REF_FUNCTION)==null)) {
+		    TypeException ex = new TypeException(ErrorMessage.INTERNAL_ANONYMOUS_FUNCTION_NODE_WITHOUT_REFERENCE_FUNCTION, node, node.child(NodeType.ID).name());
+		    node.error(new TypeError(ex.stringify(), Thread.currentThread().getStackTrace()));
+		    throw ex;
+		}else if(node.hasAttr(NodeAttr.REF_CORE_FUNCTION)) {
+			IFunction ifun = ((IFunction)node.attr(NodeAttr.REF_CORE_FUNCTION));
+			List<GType> inputs_l = ifun.getParamTypes();
+			inputs=inputs_l.toArray(new GType[inputs_l.size()]);
+			Map<BType, GType> outputs_l = ifun.getOutType();
+			// the a-priori return type taken from core functions
+			outputs = new GType[] { outputs_l.get(BType.UNKNOWN) };
+			node.expr(GType.get(BType.FUNCTION, inputs, outputs));
+		}else if(node.hasAttr(NodeAttr.REF_FUNCTION)) {
+			// be sure the type of the node is the same as the ref-function node
+		    List<GType> types = idNode.exprs();
+		    AASTNode rnode = (AASTNode) idNode.attr(NodeAttr.REF_FUNCTION);
+		    // propagate type
+		    rnode.exprs(types, false);
+		}
+		return node;
+	} 
 	default:
 	    TypeException ex = new TypeException(ErrorMessage.INTERNAL_UNSUPPORTED_OPERATION, statement);
 	    node.error(new TypeError(ex.stringify(), Thread.currentThread().getStackTrace()));
