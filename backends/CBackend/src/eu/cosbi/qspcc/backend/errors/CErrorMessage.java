@@ -68,6 +68,11 @@ public enum CErrorMessage implements ErrorCode {
     TODO_INTERNAL_FRONTEND_FUNCTION_ODESET_NONSCALAR_ARGUMENT,
     TODO_INTERNAL_FRONTEND_FUNCTION_ODESET_NONSTRING_ARGUMENT,
     TODO_INTERNAL_FRONTEND_FUNCTION_ODESET_WRONG_ARGUMENTS,
+    TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_WRONG_ARGUMENTS,
+    TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONSCALAR_ARGUMENT,
+    TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONMATRIX_ARGUMENT,
+    TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONSTRING_ARGUMENT,
+    TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONINT_ARGUMENT,
     TODO_INTERNAL_SLICE_TYPE,
     TODO_USER_ACCESS_INDEXES_GREATER_THAN_MATRIX_DIMENSIONS,
     TODO_USER_WARN_PARAMETER_TYPE,
@@ -530,6 +535,31 @@ public enum CErrorMessage implements ErrorCode {
 		          extension_info	// static string with informations about how to extend qspcc
 		);
 	break;
+	case TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_WRONG_ARGUMENTS:
+	    ret = String.format(
+					"Function 'optimoptions' requires name-value paired arguments. See MATLAB manual."
+			);
+	break;		
+	case TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONSTRING_ARGUMENT:
+	    ret = String.format(
+				"Paramter '"+params[0]+"' of function 'optimoptions' should be of type 'String'. See MATLAB manual."
+		);
+	break;	
+	case TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONMATRIX_ARGUMENT:
+	    ret = String.format(
+				"Paramter '"+params[0]+"' of function 'optimoptions' should be of type 'Matrix'. See MATLAB manual."
+		);
+	break;
+	case TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONINT_ARGUMENT:
+	    ret = String.format(
+				"Paramter '"+params[0]+"' of function 'optimoptions' should be of type 'iNT'. See MATLAB manual."
+		);
+	break;	
+	case TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONSCALAR_ARGUMENT:
+	    ret = String.format(
+				"Paramter '"+params[0]+"' of function 'optimoptions' should be of type 'Scalar'. See MATLAB manual."
+		);
+	break;	
 	case TODO_INTERNAL_FRONTEND_FUNCTION_ODESET_WRONG_ARGUMENTS:
 	case TODO_INTERNAL_FRONTEND_FUNCTION_ODESET_NONSTRING_ARGUMENT:
 	case TODO_INTERNAL_FRONTEND_FUNCTION_ODESET_NONSCALAR_ARGUMENT:
