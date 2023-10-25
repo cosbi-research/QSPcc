@@ -276,6 +276,34 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		}
 	}
 
+	private enum OptimOptionsParameter {
+		INITIAL_STD(new String[] { "InitialStandardDeviations" }, 0.3),
+		SEED(new String[] {"seed"}, 0),
+		LAMBDA(new String[] {"lambda","popSize"},100),
+		MAX_FUN_EVALS(new String[] { "stopMaxFunEvals", "MaxFunctionEvaluations" }, 1e299),
+		MAX_ITER(new String[] { "stopMaxIter", "MaxIterations" }, 1e299),
+		TOL(new String[] {"stopTolFun"}, 1e-12),
+		HIST_TOL(new String[] {"stopTolFunHist"}, 1e-13),
+		TOL_X(new String[] {"stopTolX"}, 1e-11),
+		TOL_X_STD(new String[] {"stopTolUpXFactor"}, 1e3)
+		;
+
+		private String[] aliases;
+		private Object defaultValue;
+
+		private OptimOptionsParameter(String[] aliases, Object defaultValue) {
+			this.aliases = aliases;
+			this.defaultValue = defaultValue;
+		}
+
+		public boolean is(String strValue) {
+			for (String alias : aliases)
+				if (alias.equals(strValue))
+					return true;
+			return false;
+		}
+	}
+
 	public C(IFunction[] coreFunctions, String mainSourcePath, String destFolder, String inputFile, Integer indent,
 			Map<String, List<String>> backendSpecificOptions, boolean dockerized) {
 		super(coreFunctions, mainSourcePath, destFolder, inputFile, indent, backendSpecificOptions, dockerized);
@@ -1196,6 +1224,9 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 					} // otherwise no parameters
 
 					if (isCoreFunction(curRoot.child(NodeType.ID))) {
+						if(child_results.size()<2) 
+							throw new UndefinedTranslationException(CErrorMessage.INTERNAL_TREE_FUNCTION_PARAMETER_LIST_MISSING, curRoot);
+						
 						String resultCoreFunctionTranslated = translateCoreFunction(curRoot, child_results.get(0),
 								child_results.get(1));
 
@@ -2035,8 +2066,13 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 									} else {
 										// optimize removing matrix access usage
 										sb.append(vsymbol + STRUCT_ACCESS + "matrix[" + leftMatrixAccess + "] = ");
-										String index = rhs_access[rhs_access.length
+										String index;
+										if(dimToBeAddedPos.size() == 1)
+											index = rhs_access[rhs_access.length
 												- (dims.length - dimToBeAddedPos.get(0))];
+										else
+											// 1x1 matrix
+											index = "0";
 										if (incompatibleElement)
 											sb.append("(" + vofTypeAsString + ") ");
 										if (!complexElement)
@@ -9050,12 +9086,172 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			newComment(curApplyNode);
 			newTranslation(curApplyNode, resultBuf.toString());
 			return outputSym;
+		case "optimoptions":
+			if (params.size() % 2 != 1)
+				throw new UndefinedTranslationException(
+						CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_WRONG_ARGUMENTS, curApplyNode);
+
+			StringBuffer bufferStmt = new StringBuffer("");
+
+			String histTol = String.valueOf(OptimOptionsParameter.HIST_TOL.defaultValue);
+			String initSTDVal = null; // String.valueOf(OptimOptionsParameter.INITIAL_STD.defaultValue);
+			String initSTDDim = null;
+			String maxEvals = String.valueOf(OptimOptionsParameter.MAX_FUN_EVALS.defaultValue);
+			String maxIter = String.valueOf(OptimOptionsParameter.MAX_ITER.defaultValue);
+			String seed = String.valueOf(OptimOptionsParameter.SEED.defaultValue);
+			String tol = String.valueOf(OptimOptionsParameter.TOL.defaultValue);
+			String tolX = String.valueOf(OptimOptionsParameter.TOL_X.defaultValue);
+			String tolXSTD = String.valueOf(OptimOptionsParameter.TOL_X_STD.defaultValue);
+			String lambda = String.valueOf(OptimOptionsParameter.LAMBDA.defaultValue);
+			
+			String[] paramsTranslatedArr = paramsTranslated.split("\\" + PARAMS_SEPARATOR);
+			// skip first that is the function to be applied to (ignored)
+			for (int i = 1; i < paramsTranslatedArr.length; i += 2) {
+				String strparam = paramsTranslatedArr[i];
+
+				// cut the quotes if they're present
+				strparam = strparam.replaceAll("\"", "");
+
+				AASTNode paramNode = params.get(i);
+				GType paramType = getExprGeneralized(paramNode);
+
+				if (!GType.get(BType.STRING).equals(paramType))
+					throw new UndefinedTranslationException(
+							CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONSTRING_ARGUMENT, curApplyNode,
+							strparam);
+				// actual string value if present
+				String strValue = strparam;
+				if (strValue == null)
+					throw new UndefinedTranslationException(
+							CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONSTRING_ARGUMENT, curApplyNode);
+
+				if (OptimOptionsParameter.HIST_TOL.is(strValue)) {
+					if (i + 1 >= params.size())
+						throw new UndefinedTranslationException(
+								CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_ODESET_WRONG_ARGUMENTS, curApplyNode, strValue);
+					AASTNode paramValNode = params.get(i + 1);
+					GType paramValType = getExprGeneralized(paramValNode);
+					if (!GType.get(BType.SCALAR).equals(paramValType.type()))
+						throw new UndefinedTranslationException(
+								CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONSCALAR_ARGUMENT, curApplyNode, strValue);
+					histTol = paramsTranslatedArr[i + 1];
+				}
+				if (OptimOptionsParameter.MAX_FUN_EVALS.is(strValue)) {
+					if (i + 1 >= params.size())
+						throw new UndefinedTranslationException(
+								CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_ODESET_WRONG_ARGUMENTS, curApplyNode, strValue);
+					AASTNode paramValNode = params.get(i + 1);
+					GType paramValType = getExprGeneralized(paramValNode);
+					if (!GType.get(BType.SCALAR).equals(paramValType.type()))
+						throw new UndefinedTranslationException(
+								CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONSCALAR_ARGUMENT, curApplyNode, strValue);
+					maxEvals = paramsTranslatedArr[i + 1];
+				}
+				if (OptimOptionsParameter.MAX_ITER.is(strValue)) {
+					if (i + 1 >= params.size())
+						throw new UndefinedTranslationException(
+								CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_ODESET_WRONG_ARGUMENTS, curApplyNode, strValue);
+					AASTNode paramValNode = params.get(i + 1);
+					GType paramValType = getExprGeneralized(paramValNode);
+					if (!GType.get(BType.INT).equals(paramValType.type()))
+						throw new UndefinedTranslationException(
+								CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONINT_ARGUMENT, curApplyNode, strValue);
+					maxIter = paramsTranslatedArr[i + 1];
+				}
+				if (OptimOptionsParameter.SEED.is(strValue)) {
+					if (i + 1 >= params.size())
+						throw new UndefinedTranslationException(
+								CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_ODESET_WRONG_ARGUMENTS, curApplyNode, strValue);
+					AASTNode paramValNode = params.get(i + 1);
+					GType paramValType = getExprGeneralized(paramValNode);
+					if (!GType.get(BType.SCALAR).equals(paramValType.type()))
+						throw new UndefinedTranslationException(
+								CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONSCALAR_ARGUMENT, curApplyNode, strValue);
+					seed = paramsTranslatedArr[i + 1];
+				}
+				if (OptimOptionsParameter.TOL.is(strValue)) {
+					if (i + 1 >= params.size())
+						throw new UndefinedTranslationException(
+								CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_ODESET_WRONG_ARGUMENTS, curApplyNode, strValue);
+					AASTNode paramValNode = params.get(i + 1);
+					GType paramValType = getExprGeneralized(paramValNode);
+					if (!GType.get(BType.SCALAR).equals(paramValType.type()))
+						throw new UndefinedTranslationException(
+								CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONSCALAR_ARGUMENT, curApplyNode, strValue);
+					tol = paramsTranslatedArr[i + 1];
+				}
+				if (OptimOptionsParameter.TOL_X.is(strValue)) {
+					if (i + 1 >= params.size())
+						throw new UndefinedTranslationException(
+								CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_ODESET_WRONG_ARGUMENTS, curApplyNode, strValue);
+					AASTNode paramValNode = params.get(i + 1);
+					GType paramValType = getExprGeneralized(paramValNode);
+					if (!GType.get(BType.SCALAR).equals(paramValType.type()))
+						throw new UndefinedTranslationException(
+								CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONSCALAR_ARGUMENT, curApplyNode, strValue);
+					tolX = paramsTranslatedArr[i + 1];
+				}
+				if (OptimOptionsParameter.TOL_X_STD.is(strValue)) {
+					if (i + 1 >= params.size())
+						throw new UndefinedTranslationException(
+								CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_ODESET_WRONG_ARGUMENTS, curApplyNode, strValue);
+					AASTNode paramValNode = params.get(i + 1);
+					GType paramValType = getExprGeneralized(paramValNode);
+					if (!GType.get(BType.SCALAR).equals(paramValType.type()))
+						throw new UndefinedTranslationException(
+								CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONSCALAR_ARGUMENT, curApplyNode, strValue);
+					tolXSTD = paramsTranslatedArr[i + 1];
+				}
+				if (OptimOptionsParameter.INITIAL_STD.is(strValue)) {
+					if (i + 1 >= params.size())
+						throw new UndefinedTranslationException(
+								CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_ODESET_WRONG_ARGUMENTS, curApplyNode, strValue);
+					AASTNode paramValNode = params.get(i + 1);
+					GType paramValType = getExprGeneralized(paramValNode);
+					if (!GType.get(BType.MATRIX).equals(paramValType.type()))
+						throw new UndefinedTranslationException(
+								CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_OPTIMOPTIONS_NONSCALAR_ARGUMENT, curApplyNode, strValue);
+					initSTDVal = paramsTranslatedArr[i + 1];
+					List<String> matrixDims = nodeDimsToStr(paramValNode, ((DimensionType) paramValType).dims(), false);
+					initSTDDim = String.join(" * ", matrixDims);
+				}
+			}
+			outNode = getOutputNode(outSymbol);
+			String outNodeName = outNode.symbol();
+			String applyName = curApplyNode.symbol();
+			// instantiate the INTEGRATION_OPTS struct
+			bufferStmt.append("cmaes_t "+applyName+";").append(NL);
+			bufferStmt.append(outNodeName).append(" = ").append("&").append(applyName).append(";	").append(NL);
+			bufferStmt.append("cmaes_init_options(");
+			bufferStmt.append(outNodeName).append(", ");
+			if(initSTDVal == null) {
+				bufferStmt.append("0").append(", ");
+				bufferStmt.append("NULL").append(", ");				
+			}else {
+				bufferStmt.append(initSTDDim).append(", ");
+				bufferStmt.append(initSTDVal+ STRUCT_ACCESS + "matrix").append(", ");
+			}
+			bufferStmt.append(seed).append(", ");
+			bufferStmt.append(lambda).append(", ");
+			bufferStmt.append(maxEvals).append(", ");
+			bufferStmt.append(maxIter).append(", ");
+			bufferStmt.append(tol).append(", ");
+			bufferStmt.append(histTol).append(", ");
+			bufferStmt.append(tolX).append(", ");
+			bufferStmt.append(tolXSTD);
+			bufferStmt.append(");").append(NL);
+
+			newComment(outSymbol);
+			newTranslation(curApplyNode, bufferStmt.toString());
+
+			return outNodeName;
+			
 		case "odeset":
 			if (params.size() % 2 != 0)
 				throw new UndefinedTranslationException(
 						CErrorMessage.TODO_INTERNAL_FRONTEND_FUNCTION_ODESET_WRONG_ARGUMENTS, curApplyNode);
 
-			StringBuffer bufferStmt = new StringBuffer("");
+			bufferStmt = new StringBuffer("");
 
 			// parameters to the odeset are in couples: the first specify the
 			// name
@@ -9066,7 +9262,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			String initialStep = String.valueOf(OdeParameter.INITIAL_STEP.defaultValue);
 			String maxOrder = String.valueOf(OdeParameter.MAX_ORDER.defaultValue);
 
-			String[] paramsTranslatedArr = paramsTranslated.split("\\" + PARAMS_SEPARATOR);
+			paramsTranslatedArr = paramsTranslated.split("\\" + PARAMS_SEPARATOR);
 			for (int i = 0; i < paramsTranslatedArr.length; i += 2) {
 				String strparam = paramsTranslatedArr[i];
 
@@ -9144,7 +9340,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 
 			}
 			outNode = getOutputNode(outSymbol);
-			String outNodeName = outNode.symbol();
+			outNodeName = outNode.symbol();
 			// instantiate the INTEGRATION_OPTS struct
 			bufferStmt.append(outNodeName).append("=setIntegrationOptions(");
 
@@ -9444,20 +9640,20 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			// write on the output file
 			return bufferStmt.toString();
 		}
-		// ode solver
-		case "ode23s":
-		case "ode45s":
-		case "ode15s":
-		case "ode23":
-		case "ode45":
-		case "ode15":
-			if (params.size() < 3)
+		// calibration function
+		case "lsqnonlin":
+			AASTNode parentApplyNode = curApplyNode.parent(NodeType.APPLY);
+			if(parentApplyNode!=null) {
+				AASTNode parentFunIdNode = parentApplyNode.child(NodeType.ID);
+				if(parentFunIdNode!=null && parentFunIdNode.name().toLowerCase().equals("optimoptions"))
+					// skip translation of @lsqnonlin in optimoptions
+					return "";
+			}
+			if (params.size() != 5)
 				throw new UndefinedTranslationException(CErrorMessage.UNSUPPORTED_FRONTEND_FUNCTION_NUMBER_OF_ARGUMENTS,
 						curApplyNode, fenum.getName(), params.size());
 
 			bufferStmt = new StringBuffer();
-
-			// the first parameter is the anonimous function to integrate
 			AASTNode anonimousFun = params.get(0);
 			// get the child FUNCTION under the Expression
 			AASTNode origFunctionNode = anonimousFun.child(NodeType.FUNCTION);
@@ -9472,6 +9668,106 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			AASTNode parameterListNode = origFunctionNode.child(NodeType.PARAMETER_LIST);
 			List<AASTNode> parameterNodes = parameterListNode.childs();
 			AASTNode functionNode = origFunctionNode;
+			List<AASTNode> envParams = new ArrayList<AASTNode>();
+			// iterates over the parameter list to look for environment variables
+			for (AASTNode parameterNode : parameterNodes)
+				if (parameterNode.hasAttr(NodeAttr.IS_FUNCTION_ENV_PARAM))
+					envParams.add(parameterNode);
+
+			// getting the parameters
+			paramsTranslatedArray = paramsTranslated.split("\\" + PARAMS_SEPARATOR);
+
+			// parameters I pass to the method
+			String x0Symbol = paramsTranslatedArray[1];
+			String optimoptionSymbol = paramsTranslatedArray[4];
+			AASTNode x0Node = params.get(1);
+			GType x0Type = getExprGeneralized(x0Node);
+
+			AASTNode lbNode = params.get(2);
+			String lbSymbol = paramsTranslatedArray[2];
+			GType lbType = getExprGeneralized(lbNode);
+
+			AASTNode ubNode = params.get(3);
+			String ubSymbol = paramsTranslatedArray[3];
+			GType ubType = getExprGeneralized(ubNode);
+
+			Tuple<String,List<AASTNode>> structDef = defineNewStruct(bufferStmt, params, envParams, 5);
+			// create a wrapper for the anonimous function so that it can be handled by
+			String structUserDataName = structDef.first();
+			List<AASTNode> dataStructEntries = structDef.second();
+			String wrappedFunctionName = wrapForCMAES(origFunctionNode.symbol(), curApplyNode, functionNode, x0Node, structUserDataName, dataStructEntries);
+			List<String> matrixDims = nodeDimsToStr(x0Node, ((DimensionType) x0Type).dims(), false);
+			String x0Dim = String.join(" * ", matrixDims);
+			
+			// complete initialization
+			bufferStmt.append("cmaes_init_problem(")
+			          .append(optimoptionSymbol).append(", ")
+			          .append(x0Dim).append(", ")
+			          .append(x0Symbol + STRUCT_ACCESS + "matrix")
+					  .append(");").append(NL);
+			// allocate memory and populate empty arrays
+			bufferStmt.append("cmaes_init_final(").append(optimoptionSymbol).append(");").append(NL);
+			// set bounds (empty for no bound)
+			List<String> lbDims = nodeDimsToStr(lbNode, ((DimensionType) lbType).dims(), false);
+			String lbDim = String.join(" * ", lbDims);
+			List<String> ubDims = nodeDimsToStr(ubNode, ((DimensionType) ubType).dims(), false);
+			String ubDim = String.join(" * ", ubDims);
+			
+			// get output node
+			outNode = getOutputNode(outSymbol);
+			GType outSymbolType = getExprGeneralized(outSymbol);
+			if (!outSymbolType.canRepresent(BType.MATRIX))
+				throw new UndefinedTranslationException(CErrorMessage.INTERNAL_OUTPUT_TYPE, curApplyNode,
+						fenum.getName(), outSymbolType);
+			String outVarName = getNodeSymbol(outNode);
+			//optimize
+			String structUserDataPointer = "&" + structUserDataName;
+			bufferStmt.append("cmaes_optimize(").append(optimoptionSymbol).append(", ")
+												.append(outVarName+STRUCT_ACCESS+"matrix").append(", ")
+			                                    .append("min("+lbDim+", "+ubDim+")").append(", ")
+			                                    .append(lbSymbol+STRUCT_ACCESS+"matrix").append(", ")
+			                                    .append(ubSymbol+STRUCT_ACCESS+"matrix").append(", ")
+			                                    .append(wrappedFunctionName).append(", ")
+			                                    .append(structUserDataPointer)
+			                                    .append(");").append(NL);
+			AASTNode assignNode = curApplyNode.parent(NodeType.ASSIGN);
+			if(assignNode!=null) {
+				// don't translate assign, already done here
+				assignNode.attr(CAttr.TRANSLATE, false);
+			}
+			
+			newComment(outSymbol);
+			newTranslation(curApplyNode, bufferStmt.toString());
+
+			return outVarName;			
+		// ode solver
+		case "ode23s":
+		case "ode45s":
+		case "ode15s":
+		case "ode23":
+		case "ode45":
+		case "ode15":
+			if (params.size() < 3)
+				throw new UndefinedTranslationException(CErrorMessage.UNSUPPORTED_FRONTEND_FUNCTION_NUMBER_OF_ARGUMENTS,
+						curApplyNode, fenum.getName(), params.size());
+
+			bufferStmt = new StringBuffer();
+
+			// the first parameter is the anonimous function to integrate
+			anonimousFun = params.get(0);
+			// get the child FUNCTION under the Expression
+			origFunctionNode = anonimousFun.child(NodeType.FUNCTION);
+			if (origFunctionNode == null) {
+				// maybe is a reference to a function
+				AASTNode refNode = anonimousFun.child(NodeType.AT);
+				if (!refNode.hasAttr(NodeAttr.REF_FUNCTION))
+					throw new MissingNodeException(CErrorMessage.INTERNAL_FUNCTION_REFERENCE_WITHOUT_REFERENCE,
+							curApplyNode, anonimousFun.name());
+				origFunctionNode = (AASTNode) refNode.attr(NodeAttr.REF_FUNCTION);
+			}
+			parameterListNode = origFunctionNode.child(NodeType.PARAMETER_LIST);
+			parameterNodes = parameterListNode.childs();
+			functionNode = origFunctionNode;
 			// detect if it's possible to avoid the call to the anonymous function
 			// (in case it's just calling another function)
 			if (functionNode.hasAttr(NodeAttr.APPLY_FUNCTION)) {
@@ -9502,7 +9798,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 				}
 			}
 
-			List<AASTNode> envParams = new ArrayList<AASTNode>();
+			envParams = new ArrayList<AASTNode>();
 			// iterates over the parameter list to look for environment variables
 			for (AASTNode parameterNode : parameterNodes)
 				if (parameterNode.hasAttr(NodeAttr.IS_FUNCTION_ENV_PARAM))
@@ -9558,62 +9854,13 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 
 			// Writes the environment variable -allowed in Matlab and R but not in C- in the
 			// user data struct, with the name slightly modified in order to avoid contrasts
-			String structUserDataName = "NULL";
-			String structUserDataPointer = "NULL";
-			// iterates over the function parameters to find the environment variables
-			// and include also extra parameters to ode call
-			boolean extra_ode_params = params.size() > 4;
-			List<AASTNode> datastructEntries = new ArrayList<AASTNode>();
-			if (!envParams.isEmpty() || extra_ode_params) {
-				// name of the userData struct
-				// declares the user data struct
-				structUserDataName = USER_DATA_VARIABLE_PREFIX + (++user_data_variable_number);
-				structUserDataPointer = "&" + structUserDataName;
-				if (!envParams.isEmpty())
-					datastructEntries.addAll(envParams);
-				List<AASTNode> extra_params = null;
-				if (extra_ode_params) {
-					extra_params = new ArrayList<AASTNode>();
-					for (AASTNode p : params.subList(4, params.size()))
-						extra_params.add(getExprNode(p));
-					datastructEntries.addAll(extra_params);
-				}
-				createUserDataStruct(datastructEntries);
-				// initialize the struct -allocates the memory-
-				bufferStmt.append(USER_DATA_STRUCT_PREFIX).append(user_data_struct_number).append(" ")
-						.append(USER_DATA_VARIABLE_PREFIX).append(user_data_variable_number).append(";").append(NL);
-
-				if (!envParams.isEmpty())
-					for (AASTNode environmentVariable : envParams) {
-						String name = environmentVariable.symbol();
-						GType eexpr = environmentVariable.expr();
-						bufferStmt.append(USER_DATA_VARIABLE_PREFIX).append(user_data_variable_number)
-								.append(STRUCT_ACCESS).append(name).append("=").append(name).append(";").append(NL);
-
-						if (eexpr != null && eexpr.equals(BType.STRUCT) && eexpr.isInput()) {
-							// add also field with input structure this structure depends on
-							bufferStmt.append(USER_DATA_VARIABLE_PREFIX).append(user_data_variable_number)
-									.append(STRUCT_ACCESS).append(eexpr.inputName()).append("=")
-									.append(eexpr.inputName()).append(";").append(NL);
-						}
-					}
-
-				if (extra_ode_params)
-					for (AASTNode extParam : extra_params) {
-						String name = extParam.symbol();
-
-						bufferStmt.append(USER_DATA_VARIABLE_PREFIX).append(user_data_variable_number)
-								.append(STRUCT_ACCESS).append(name).append("=").append(name).append(";").append(NL);
-					}
-
-			} else {
-				++user_data_variable_number;
-			}
-
-			// create a wrapper for the anonimous function so that it can be handled by
+			structDef = defineNewStruct(bufferStmt, params, envParams, 4);
+						// create a wrapper for the anonimous function so that it can be handled by
+			structUserDataName = structDef.first();
+			dataStructEntries = structDef.second();
 			// Sundials
-			String wrappedFunctionName = wrapForSundials(origFunctionNode.symbol(), functionNode, params.get(2),
-					structUserDataName, datastructEntries);
+			wrappedFunctionName = wrapForSundials(origFunctionNode.symbol(), functionNode, params.get(2),
+					structUserDataName, dataStructEntries);
 
 			// here you should call just the wrapping functions -different depending on how
 			// times are specified-
@@ -9690,7 +9937,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			// the ODE init, with which you can initialize the solver
 
 			String yLength = String.join("*", y0DimsAsStrings);
-
+			structUserDataPointer = "&" + structUserDataName;
 			bufferStmt.append(sundialInitializerName).append(" = sun_init_" + suffix + "(")
 					.append(sundialInitializerName).append(", ").append(wrappedFunctionName).append(", ")
 					.append(getPointerSymbol(y0Symbol)).append(", ").append(yLength).append(", ").append(startTime)
@@ -9948,6 +10195,63 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			throw new UndefinedTranslationException(CErrorMessage.UNSUPPORTED_FRONTEND_FUNCTION, curApplyNode, fenum);
 		}
 
+	}
+
+	private Tuple<String, List<AASTNode>> defineNewStruct(StringBuffer bufferStmt, List<AASTNode> params, List<AASTNode> envParams, int extra_params_after) throws UndefinedTranslationException {
+
+		String structUserDataName = "NULL";
+		String structUserDataPointer = "NULL";
+		// iterates over the function parameters to find the environment variables
+		// and include also extra parameters to ode call
+		boolean extra_ode_params = params.size() > extra_params_after;
+		List<AASTNode> datastructEntries = new ArrayList<AASTNode>();
+		if (!envParams.isEmpty() || extra_ode_params) {
+			// name of the userData struct
+			// declares the user data struct
+			structUserDataName = USER_DATA_VARIABLE_PREFIX + (++user_data_variable_number);
+			structUserDataPointer = "&" + structUserDataName;
+			if (!envParams.isEmpty())
+				datastructEntries.addAll(envParams);
+			List<AASTNode> extra_params = null;
+			if (extra_ode_params) {
+				extra_params = new ArrayList<AASTNode>();
+				for (AASTNode p : params.subList(extra_params_after, params.size()))
+					extra_params.add(getExprNode(p));
+				datastructEntries.addAll(extra_params);
+			}
+			createUserDataStruct(datastructEntries);
+			// initialize the struct -allocates the memory-
+			bufferStmt.append(USER_DATA_STRUCT_PREFIX).append(user_data_struct_number).append(" ")
+					.append(USER_DATA_VARIABLE_PREFIX).append(user_data_variable_number).append(";").append(NL);
+
+			if (!envParams.isEmpty())
+				for (AASTNode environmentVariable : envParams) {
+					String name = environmentVariable.symbol();
+					GType eexpr = environmentVariable.expr();
+					bufferStmt.append(USER_DATA_VARIABLE_PREFIX).append(user_data_variable_number)
+							.append(STRUCT_ACCESS).append(name).append("=").append(name).append(";").append(NL);
+
+					if (eexpr != null && eexpr.equals(BType.STRUCT) && eexpr.isInput()) {
+						// add also field with input structure this structure depends on
+						bufferStmt.append(USER_DATA_VARIABLE_PREFIX).append(user_data_variable_number)
+								.append(STRUCT_ACCESS).append(eexpr.inputName()).append("=")
+								.append(eexpr.inputName()).append(";").append(NL);
+					}
+				}
+
+			if (extra_ode_params)
+				for (AASTNode extParam : extra_params) {
+					String name = extParam.symbol();
+
+					bufferStmt.append(USER_DATA_VARIABLE_PREFIX).append(user_data_variable_number)
+							.append(STRUCT_ACCESS).append(name).append("=").append(name).append(";").append(NL);
+				}
+
+		} else {
+			++user_data_variable_number;
+		}
+
+		return new Tuple<String, List<AASTNode>>(structUserDataName, datastructEntries);
 	}
 
 	/**
@@ -10364,6 +10668,145 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		return alreadyBeenAllocated;
 	}
 
+	/**
+	 * create custom function in C with signature
+	 * double (*f)(double *x, int dimension, void *user_data)
+	 * @param origFunctionNodeName
+	 * @param fun
+	 * @param x0
+	 * @param userDataStructName
+	 * @param extraParameterNodes
+	 * @return
+	 * @throws UndefinedTranslationException 
+	 * @throws TypeException 
+	 */
+	private String wrapForCMAES(String origFunctionNodeName, AASTNode curApplyNode, AASTNode fun, AASTNode x0, String userDataStructName,
+			List<AASTNode> extraParameterNodes) throws TypeException, UndefinedTranslationException {
+		
+		StringBuffer bufferToWriteOn = new StringBuffer();
+		
+		String wrapFunction = origFunctionNodeName + "_wrap_cmaes";
+		// avoid creating it twice
+		if (wrapFunctions.contains(wrapFunction))
+			return wrapFunction;
+
+		wrapFunctions.add(wrapFunction);
+		
+		bufferToWriteOn.append("static inline double ").append(wrapFunction)
+		.append("(double *x, int dimension, void *user_data){").append(NL);
+
+		if (userDataStructName != null && currentUserDataStructName != null) {
+			// cast
+			bufferToWriteOn.append(indentTabs()).append(currentUserDataStructName).append(" *temp=").append("(")
+					.append(currentUserDataStructName).append(" *) user_data;").append(NL);
+		}
+
+		// create auxiliary matrix structure
+		// get the size of x
+		GType inputType = ((FunctionType) fun.expr()).inputs().get(0);
+
+		GType typeOf = null;
+		if (inputType instanceof DimensionType) {
+			typeOf = ((DimensionType) inputType).of();
+		} else {
+			typeOf = inputType;
+		}
+
+		String stringType = exprTypeToCType(typeOf);
+
+		int n_dims = -1;
+		if (inputType.isCastableToScalar())
+			n_dims = 1;
+		else if (inputType.isCastableToMatrix())
+			n_dims = ((DimensionType) inputType).dims().length;
+		else
+			throw new TypeException(CErrorMessage.INTERNAL_SUNDIALS_WRONG_INTEGRAND_FUNCTION_TYPE, fun, inputType);
+
+		String structName = getMatrixTypeName(stringType, n_dims, false);
+
+		bufferToWriteOn.append(indentTabs()).append(structName + " ").append("y_as_matrixDouble_2D;").append(NL);
+		// populate the struct
+		bufferToWriteOn.append(indentTabs()).append("y_as_matrixDouble_2D.matrix = x;").append(NL);
+		String[] ones = new String[n_dims];
+		ones[0] = "dimension";
+		for (int j = 1; j < n_dims; j++) {
+			ones[j] = "1";
+			bufferToWriteOn.append(indentTabs()).append(TypeUtils.matrixDimName("y_as_matrixDouble_2D", j))
+					.append("=1;").append(NL);
+		}
+		bufferToWriteOn.append(indentTabs()).append(TypeUtils.matrixDimName("y_as_matrixDouble_2D", n_dims))
+				.append("=dimension;").append(NL);
+		bufferToWriteOn.append(indentTabs()).append("int poly_basis_vals[" + n_dims + "] = {")
+				.append(String.join(", ", ones)).append("};").append(NL);
+		bufferToWriteOn.append(indentTabs())
+				.append("y_as_matrixDouble_2D" + STRUCT_ACCESS + "poly_basis = poly_basis_vals;").append(NL);
+		bufferToWriteOn.append(indentTabs()).append("y_as_matrixDouble_2D" + STRUCT_ACCESS + "__realsize = dimension;")
+				.append(NL);
+
+		
+		GType outputType = ((FunctionType) getExprGeneralized(fun)).outputs().get(0);
+		String outputTypeAsCString = exprTypeToCType(outputType);
+		bufferToWriteOn.append(indentTabs()).append(outputTypeAsCString).append(" s = ");
+		bufferToWriteOn.append(fun.symbol() + "(");
+		bufferToWriteOn.append("y_as_matrixDouble_2D");
+		// write the env parameter
+		Boolean firstEnvironmentParameter = true;
+		for (AASTNode extraParam : extraParameterNodes) {
+			if (firstEnvironmentParameter) {
+				bufferToWriteOn.append(",");
+				firstEnvironmentParameter = false;
+			}
+			bufferToWriteOn.append("temp->" + extraParam.symbol() + ",");
+			GType pexpr = extraParam.expr();
+			if (pexpr != null && pexpr.equals(BType.STRUCT) && pexpr.isInput()) {
+				// add input symbol this structure depends on
+				bufferToWriteOn.append(" temp->" + pexpr.inputName() + ",");
+			}
+		}
+		// removes the last comma
+		if (bufferToWriteOn.toString().endsWith(",")) {
+			bufferToWriteOn.setLength(bufferToWriteOn.toString().length() - 1);
+		}
+		bufferToWriteOn.append(")").append(";").append(NL);
+		String functionCode = "power";
+		String functionName = null;
+		try {
+			functionName = getCFunctionImplementationManagerInstance().getScalarTranslation(functionCode);
+		} catch (Exception e) {
+			throw new UndefinedTranslationException(CErrorMessage.UNSUPPORTED_PREFERRED_AND_ALTERNATIVE_TRANSLATION,
+					curApplyNode, functionCode);
+		}
+		if (outputType.type().equals(BType.SCALAR)) {
+			bufferToWriteOn.append(indentTabs()).append("return "+functionName+"(s, 2);").append(NL);
+		} else if (outputType.type().equals(BType.MATRIX)) {
+			DimensionType outMatrixType = (DimensionType) outputType;
+			n_dims = outMatrixType.dims().length;
+			List<String> dims = new ArrayList<String>(n_dims);
+			for(int i = 1; i <= n_dims; ++i)
+				dims.add(TypeUtils.matrixDimName("s", i));
+
+			String ofTypeAsCString = exprTypeToCType(outMatrixType.of());
+			// sum of squares of s
+			bufferToWriteOn.append(indentTabs()).append(ofTypeAsCString).append(" sss = 0;").append(NL);
+			
+			bufferToWriteOn.append(indentTabs()).append("#pragma omp smid").append(NL);
+			bufferToWriteOn.append(indentTabs())
+					.append("for(int i=0; i < " + String.join(" * ", dims) + " ; ++i)").append(NL)
+					.append(indentTabs()).append(TAB).append("sss += ").append(functionName).append("(s").append(STRUCT_ACCESS).append("matrix[i], 2);").append(NL);
+
+			bufferToWriteOn.append(indentTabs()).append("return sss;").append(NL);
+		} else
+			throw new UndefinedTranslationException(
+					CErrorMessage.INTERNAL_SUNDIALS_WRONG_INTEGRAND_FUNCTION_RETURN_TYPE, fun);
+		
+		bufferToWriteOn.append("}").append(NL).append(NL);
+
+		// append to the right buffer
+		StringBuffer targetBuffer = (curFun == null) ? getLocalFunctionsBuffer() : curFun.getLocalFunctionsBuffer();
+		targetBuffer.append(bufferToWriteOn);
+
+		return wrapFunction;
+	}
 	/*
 	 * wraps the function in a sundial-compatible function. There could be more
 	 * parameters in the original function, that are fixed (e.g. f(y,t,A,B) in which
@@ -12538,6 +12981,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		ussunwriter.write("#include \"load-structures.h\"" + NL);
 		ussunwriter.write("#include \"user-structures.h\"" + NL);
 		ussunwriter.write("#include \"matrixLib.h\"" + NL + NL);
+		ussunwriter.write("#include \"cmaes_interface.h\"" + NL + NL);
 
 		// write header only in main
 		ushwriter.write("#ifndef __USER_STRUCT__" + NL);
@@ -12749,6 +13193,48 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 
 			mkwriter.close();
 
+			// === CMAES ===
+			headerLibImpl = getLoadStructuresLibH(getCMAESCInputStream(), programName, fun_names);
+			mkwriter = Files.newBufferedWriter(destpath.resolve("cmaes.c"));
+			mkwriter.write(headerLibImpl);
+			mkwriter.close();
+			
+			headerLibImpl = getLoadStructuresLibH(getCMAESHInputStream(), programName, fun_names);
+			mkwriter = Files.newBufferedWriter(destpath.resolve("cmaes.h"));
+			mkwriter.write(headerLibImpl);
+			mkwriter.close();
+			
+			headerLibImpl = getLoadStructuresLibH(getCMAESIntHInputStream(), programName, fun_names);
+			mkwriter = Files.newBufferedWriter(destpath.resolve("cmaes_interface.h"));
+			mkwriter.write(headerLibImpl);
+			mkwriter.close();
+			
+			headerLibImpl = getLoadStructuresLibH(getCMAESBoundaryHInputStream(), programName, fun_names);
+			mkwriter = Files.newBufferedWriter(destpath.resolve("boundary_transformation.h"));
+			mkwriter.write(headerLibImpl);
+			mkwriter.close();
+			
+			headerLibImpl = getLoadStructuresLibH(getCMAESBoundaryCInputStream(), programName, fun_names);
+			mkwriter = Files.newBufferedWriter(destpath.resolve("boundary_transformation.c"));
+			mkwriter.write(headerLibImpl);
+			mkwriter.close();
+			
+			headerLibImpl = getLoadStructuresLibH(getCMAESPlotInputStream(), programName, fun_names);
+			mkwriter = Files.newBufferedWriter(destpath.resolve("plotcmaesdat.m"));
+			mkwriter.write(headerLibImpl);
+			mkwriter.close();
+			
+			headerLibImpl = getLoadStructuresLibH(getCMAESPlotSCIInputStream(), programName, fun_names);
+			mkwriter = Files.newBufferedWriter(destpath.resolve("plotcmaesdat.sci"));
+			mkwriter.write(headerLibImpl);
+			mkwriter.close();
+
+			headerLibImpl = getLoadStructuresLibH(getCMAESSignalsInputStream(), programName, fun_names);
+			mkwriter = Files.newBufferedWriter(destpath.resolve("cmaes_signals.par"));
+			mkwriter.write(headerLibImpl);
+			mkwriter.close();
+			// === END CMAES ===
+			
 			headerLibImpl = getLoadStructuresLibH(getLoadStructuresHInputStream(), programName, fun_names);
 			// write it
 			mkwriter = Files.newBufferedWriter(destpath.resolve("load-structures.h"));
@@ -12957,6 +13443,87 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			String beforepath = getBeforePath("load-structures.h");
 			fStream = new FileInputStream(Paths.get(beforepath + "backends/CBackend/resources").toAbsolutePath()
 					.resolve("load-structures.h").toString());
+		}
+		return fStream;
+	}
+
+	protected InputStream getCMAESCInputStream() throws FileNotFoundException {
+		InputStream fStream = C.class.getClassLoader().getResourceAsStream("resources/cmaes/src/cmaes.c");
+
+		if (fStream == null) {
+			String beforepath = getBeforePath("cmaes.c");
+			fStream = new FileInputStream(Paths.get(beforepath + "backends/CBackend/resources/cmaes/src").toAbsolutePath()
+					.resolve("cmaes.c").toString());
+		}
+		return fStream;
+	}
+	protected InputStream getCMAESHInputStream() throws FileNotFoundException {
+		InputStream fStream = C.class.getClassLoader().getResourceAsStream("resources/cmaes/src/cmaes.h");
+
+		if (fStream == null) {
+			String beforepath = getBeforePath("cmaes.h");
+			fStream = new FileInputStream(Paths.get(beforepath + "backends/CBackend/resources/cmaes/src").toAbsolutePath()
+					.resolve("cmaes.h").toString());
+		}
+		return fStream;
+	}
+	protected InputStream getCMAESIntHInputStream() throws FileNotFoundException {
+		InputStream fStream = C.class.getClassLoader().getResourceAsStream("resources/cmaes/src/cmaes_interface.h");
+
+		if (fStream == null) {
+			String beforepath = getBeforePath("cmaes_interface.h");
+			fStream = new FileInputStream(Paths.get(beforepath + "backends/CBackend/resources/cmaes/src").toAbsolutePath()
+					.resolve("cmaes_interface.h").toString());
+		}
+		return fStream;
+	}
+	protected InputStream getCMAESBoundaryCInputStream() throws FileNotFoundException {
+		InputStream fStream = C.class.getClassLoader().getResourceAsStream("resources/cmaes/src/boundary_transformation.c");
+
+		if (fStream == null) {
+			String beforepath = getBeforePath("boundary_transformation.c");
+			fStream = new FileInputStream(Paths.get(beforepath + "backends/CBackend/resources/cmaes/src").toAbsolutePath()
+					.resolve("boundary_transformation.c").toString());
+		}
+		return fStream;
+	}
+	protected InputStream getCMAESBoundaryHInputStream() throws FileNotFoundException {
+		InputStream fStream = C.class.getClassLoader().getResourceAsStream("resources/cmaes/src/boundary_transformation.h");
+
+		if (fStream == null) {
+			String beforepath = getBeforePath("boundary_transformation.h");
+			fStream = new FileInputStream(Paths.get(beforepath + "backends/CBackend/resources/cmaes/src").toAbsolutePath()
+					.resolve("boundary_transformation.h").toString());
+		}
+		return fStream;
+	}
+	protected InputStream getCMAESPlotInputStream() throws FileNotFoundException {
+		InputStream fStream = C.class.getClassLoader().getResourceAsStream("resources/cmaes/src/plotcmaesdat.m");
+
+		if (fStream == null) {
+			String beforepath = getBeforePath("plotcmaesdat.m");
+			fStream = new FileInputStream(Paths.get(beforepath + "backends/CBackend/resources/cmaes/src").toAbsolutePath()
+					.resolve("plotcmaesdat.m").toString());
+		}
+		return fStream;
+	}
+	protected InputStream getCMAESPlotSCIInputStream() throws FileNotFoundException {
+		InputStream fStream = C.class.getClassLoader().getResourceAsStream("resources/cmaes/src/plotcmaesdat.sci");
+
+		if (fStream == null) {
+			String beforepath = getBeforePath("plotcmaesdat.sci");
+			fStream = new FileInputStream(Paths.get(beforepath + "backends/CBackend/resources/cmaes/src").toAbsolutePath()
+					.resolve("plotcmaesdat.sci").toString());
+		}
+		return fStream;
+	}
+	protected InputStream getCMAESSignalsInputStream() throws FileNotFoundException {
+		InputStream fStream = C.class.getClassLoader().getResourceAsStream("resources/cmaes/cmaes_signals.par");
+
+		if (fStream == null) {
+			String beforepath = getBeforePath("cmaes_signals.par");
+			fStream = new FileInputStream(Paths.get(beforepath + "backends/CBackend/resources/cmaes").toAbsolutePath()
+					.resolve("cmaes_signals.par").toString());
 		}
 		return fStream;
 	}
