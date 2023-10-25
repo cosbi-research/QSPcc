@@ -1126,6 +1126,41 @@ public enum M2CFunction implements IFunction {
 	    M2CUpdaters.updateStatisticalReturnType(),
 	    // param types
 	    GType.get(BType.UNKNOWN)),
+    // setting optimize parameters
+    OPTIMOPTIONS(
+    	    "optimoptions",
+    	    // is an env variable?
+    	    FunctionType.ND,
+    	    // return type
+    	    GType.get(BType.STRUCT).name("cmaes_t").setKnown(),
+    	    // param types
+    	    GType.get(BType.UNKNOWN)),
+    LSQNONLIN(
+    		"lsqnonlin",
+    	    // is an env variable?
+    	    FunctionType.ND,
+    	    // return type
+    	    // return type
+    	    GType.get(BType.MATRIX, "ode23s_out", GType.get(BType.SCALAR)),
+    	    // update return type based on actual param types
+    	    M2CUpdaters.updateLsqNonLinReturnType(),
+    	    // update params types based on actual param types
+    	    M2CUpdaters.updateLsqNonLinParams(),
+    	    // PARAM TYPES
+    	    // first parameter is a function that takes  a
+    	    // matrix of scalars and return an optimized matrix of scalars
+    	    GType.get(BType.FUNCTION,
+    		    new GType[] { GType.get(BType.MATRIX, "opt_in", GType.get(BType.SCALAR)) },
+    		    new GType[] { GType.get(BType.MATRIX, "opt_out", GType.get(BType.SCALAR)) }),
+    	    // second parameter is an initial guess
+    	    GType.get(BType.MATRIX, "opt_in0", GType.get(BType.SCALAR)),
+    	    // the third parameter is the lowerbound (set to [] to disable)
+    	    GType.get(BType.MATRIX, "opt_lb", GType.get(BType.SCALAR)),
+    	    // the third parameter is the upperbound (set to [] to disable)
+    	    GType.get(BType.MATRIX, "opt_ub", GType.get(BType.SCALAR)),
+    	    // fourth parameter is the options struct
+    	    GType.get(BType.STRUCT).name("cmaes_t").setKnown() // 45
+    		),
     // setting ODE parameters
     ODESET(
 	    "odeset",

@@ -19,6 +19,7 @@ import eu.cosbi.qspcc.exceptions.ErrorMessage;
 import eu.cosbi.qspcc.exceptions.GException;
 import eu.cosbi.qspcc.exceptions.TypeException;
 import eu.cosbi.qspcc.expressions.type.DimensionType;
+import eu.cosbi.qspcc.expressions.type.FunctionType;
 import eu.cosbi.qspcc.expressions.type.GType;
 import eu.cosbi.qspcc.expressions.type.IntType;
 import eu.cosbi.qspcc.expressions.type.ScalarType;
@@ -28,6 +29,7 @@ import eu.cosbi.qspcc.expressions.type.Type;
 import eu.cosbi.qspcc.expressions.type.TypeDefinition.BType;
 import eu.cosbi.qspcc.expressions.type.ValuedType;
 import eu.cosbi.qspcc.expressions.type.interfaces.DimsType;
+import eu.cosbi.qspcc.interfaces.CompilerFrontend.IFunction;
 import eu.cosbi.qspcc.symbols.Symbols;
 import eu.cosbi.utils.ArrayUtils;
 import eu.cosbi.utils.Triple;
@@ -754,6 +756,93 @@ public class M2CUpdaters {
 	    if (has_extra_params)
 		ret = ArrayUtils.concatenate(ret, extra_params);
 	    return ret;
+
+	};
+    }
+    
+    public static BiFunction<AASTNode, List<GType>, GType[]> updateLsqNonLinReturnType() {
+	return (AASTNode node, List<GType> paramTypes) -> {
+	    if (paramTypes.size() == 0)
+		// doesn't support execution on 0 parameters
+		return new GType[] { GType.get(BType.UNKNOWN) };
+	    
+		DimensionType y0 = (DimensionType) paramTypes.get(1);
+		IntType[] y0Dims = y0.dims();
+		IntType[] newDimensions = new IntType[y0Dims.length];
+		for (int i = 0; i < y0Dims.length; ++i) {
+		    newDimensions[i] = (IntType) GType.get(y0Dims[i]);
+		}
+		
+	    // check if output node on the left hand side is a variable or a matrix of
+	    // variables
+	    List<AASTNode> lhsMat = lhsMatrices(node);
+		AASTNode outNode = null;
+		if (lhsMat == null)
+		    outNode = node;
+		else
+		    outNode = lhsMat.get(0);
+		return new GType[] { GType.get(BType.MATRIX, TypeUtils.matrixName(outNode), GType.get(BType.SCALAR), newDimensions) };
+	};
+    }
+
+    public static BiFunction<AASTNode, List<GType>, GType[]> updateLsqNonLinParams() {
+	return (AASTNode node, List<GType> paramTypes) -> {
+	    if (paramTypes.size() == 0)
+	    	// doesn't support execution on 0 parameters
+	    	return new GType[] { GType.get(BType.UNKNOWN) };
+	    // integrator type should always be a function
+	    FunctionType integratorType;
+
+	    GType initialConditions = paramTypes.get(1);
+	    if (!initialConditions.equals(BType.UNKNOWN)) {
+		if (!(initialConditions instanceof DimensionType))
+		    return new GType[] { GType.get(BType.UNDEFINED).name(
+			    "Function lsqnonlin initial conditions should be of type matrix, not " + initialConditions) };
+
+		// update param and return type
+	    integratorType = (FunctionType) GType.get(paramTypes.get(0));
+	    integratorType.input(0, GType.get(initialConditions));
+	    integratorType.output(0, GType.get(initialConditions));
+	    
+	    } else
+		integratorType = (FunctionType) GType.get(BType.FUNCTION,
+			new GType[] { GType.get(BType.UNKNOWN) },
+			new GType[] { GType.get(BType.UNKNOWN) });
+
+	    GType lb = GType.get(paramTypes.get(2));
+	    GType ub = GType.get(paramTypes.get(3));
+	    List<AASTNode> formalParametersUnknown = new ArrayList<AASTNode>(2);
+	    List<AASTNode> actualParametersUnknown = new ArrayList<AASTNode>(2);
+	    List<AASTNode> envParametersUnknown = new ArrayList<AASTNode>(2);
+	    List<AASTNode> params = node.childs(NodeType.FUNCTION_PARAMETER_LIST);
+    	AASTNode funIdNode = node.child(NodeType.ID);
+    	IFunction coreFun = funIdNode.coreFunction();
+    	
+	    if(lb.equals(BType.UNKNOWN) || lb.equals(BType.UNDEFINED)) {
+	    	actualParametersUnknown.add(params.get(2));
+	    	List<GType> formalParamTypes = coreFun.getParamTypes();
+	    	GType lb_t = formalParamTypes.get(2);
+	    	AASTNode lb_fakeNode = new AASTNode(null, NodeType.ID, lb_t.name());
+	    	lb_fakeNode.expr(lb_t);
+	    	formalParametersUnknown.add(lb_fakeNode);
+	    	envParametersUnknown.add(null);
+	    }
+	    if(ub.equals(BType.UNKNOWN) || ub.equals(BType.UNDEFINED)) {
+	    	actualParametersUnknown.add(params.get(3));
+	    	List<GType> formalParamTypes = coreFun.getParamTypes();
+	    	GType ub_t = formalParamTypes.get(3);
+	    	AASTNode ub_fakeNode = new AASTNode(null, NodeType.ID, ub_t.name());
+	    	ub_fakeNode.expr(ub_t);
+	    	formalParametersUnknown.add(ub_fakeNode);
+	    	envParametersUnknown.add(null);
+	    }
+	    if(!actualParametersUnknown.isEmpty()) {
+	    	TypeException ex = new TypeException(ErrorMessage.FUN_FORMAL_PARAMS_UNKNOWN, node,
+			    formalParametersUnknown, actualParametersUnknown, envParametersUnknown,
+			    coreFun, funIdNode.name());
+		    node.deferrableError(ErrorMessage.FUN_FORMAL_PARAMS_UNKNOWN, ex);
+	    }	    
+	    return new GType[] { integratorType, GType.get(initialConditions), lb, ub, GType.get(paramTypes.get(4)) };
 
 	};
     }
