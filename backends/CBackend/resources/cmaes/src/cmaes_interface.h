@@ -24,6 +24,19 @@ extern "C" {
 #endif
 
 /* --- initialization, constructors, destructors --- */
+/* QSPCC together they make the same of cmaes_init_para but are fully programmatic */
+void cmaes_init_options(cmaes_t *, 
+		int dimension, double *stddev, long seed, int lambda, 
+		double stopMaxFunEvals, double stopMaxIter, 
+		double stopTolFun, double stopTolFunHist,
+		double stopTolX, double stopTolUpXFactor
+		);
+void cmaes_init_problem(cmaes_t *, int dimension, double *xstart);
+double *cmaes_optimize(cmaes_t *, double *xopt, 
+                    int n_bounds, double *lowerBounds, double *upperBounds,
+                    double (*f)(double *x, int dimension, void *user_data),
+                    void *user_data);
+/* QSPCC end */
 double * cmaes_init(cmaes_t *, int dimension , double *xstart, 
 		double *stddev, long seed, int lambda, 
 		const char *input_parameter_filename);

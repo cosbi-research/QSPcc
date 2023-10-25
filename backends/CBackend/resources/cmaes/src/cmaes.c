@@ -148,6 +148,7 @@
 #include <string.h> /* strlen() */
 #include <stdio.h>  /* sprintf(), NULL? */
 #include "cmaes_interface.h" /* <time.h> via cmaes.h */
+#include "boundary_transformation.h" /* <time.h> via cmaes.h */
 
 /* --------------------------------------------------------- */
 /* ------------------- Declarations ------------------------ */
@@ -269,6 +270,185 @@ cmaes_init_para(cmaes_t *t, /* "this" */
   cmaes_readpara_init(&t->sp, dimension, inxstart, inrgstddev, inseed, 
                    lambda, input_parameter_filename);
 }
+
+/* QSPCC */
+void
+cmaes_init_options(cmaes_t *t, /* "this" */
+		int dimension, double *stddev, long seed, int lambda, 
+		double stopMaxFunEvals, double stopMaxIter, 
+		double stopTolFun, double stopTolFunHist,
+		double stopTolX, double stopTolUpXFactor)
+{
+  int i, N;
+  /* TODO: make sure cmaes_readpara_init has not been called already */
+  t->filename = NULL; /* set after successful Read */
+  t->rgsformat = (const char **) new_void(55, sizeof(char *));
+  t->rgpadr = (void **) new_void(55, sizeof(void *)); 
+  t->rgskeyar = (const char **) new_void(11, sizeof(char *));
+  t->rgp2adr = (double ***) new_void(11, sizeof(double **));
+  t->weigkey = (char *)new_void(7, sizeof(char)); 
+
+  /* All scalars:  */
+  i = 0;
+  t->rgsformat[i] = " N %d";        t->rgpadr[i++] = (void *) &t->N; 
+  t->rgsformat[i] = " seed %d";    t->rgpadr[i++] = (void *) &t->seed;
+  t->rgsformat[i] = " stopMaxFunEvals %lg"; t->rgpadr[i++] = (void *) &t->stopMaxFunEvals;
+  t->rgsformat[i] = " stopMaxIter %lg"; t->rgpadr[i++] = (void *) &t->stopMaxIter;
+  t->rgsformat[i] = " stopFitness %lg"; t->rgpadr[i++]=(void *) &t->stStopFitness.val;
+  t->rgsformat[i] = " stopTolFun %lg"; t->rgpadr[i++]=(void *) &t->stopTolFun;
+  t->rgsformat[i] = " stopTolFunHist %lg"; t->rgpadr[i++]=(void *) &t->stopTolFunHist;
+  t->rgsformat[i] = " stopTolX %lg"; t->rgpadr[i++]=(void *) &t->stopTolX;
+  t->rgsformat[i] = " stopTolUpXFactor %lg"; t->rgpadr[i++]=(void *) &t->stopTolUpXFactor;
+  t->rgsformat[i] = " lambda %d";      t->rgpadr[i++] = (void *) &t->lambda;
+  t->rgsformat[i] = " mu %d";          t->rgpadr[i++] = (void *) &t->mu;
+  t->rgsformat[i] = " weights %5s";    t->rgpadr[i++] = (void *) t->weigkey;
+  t->rgsformat[i] = " fac*cs %lg";t->rgpadr[i++] = (void *) &t->cs;
+  t->rgsformat[i] = " fac*damps %lg";   t->rgpadr[i++] = (void *) &t->damps;
+  t->rgsformat[i] = " ccumcov %lg";    t->rgpadr[i++] = (void *) &t->ccumcov;
+  t->rgsformat[i] = " mucov %lg";     t->rgpadr[i++] = (void *) &t->mucov;
+  t->rgsformat[i] = " fac*ccov %lg";  t->rgpadr[i++]=(void *) &t->ccov;
+  t->rgsformat[i] = " diagonalCovarianceMatrix %lg"; t->rgpadr[i++]=(void *) &t->diagonalCov;
+  t->rgsformat[i] = " updatecov %lg"; t->rgpadr[i++]=(void *) &t->updateCmode.modulo;
+  t->rgsformat[i] = " maxTimeFractionForEigendecompostion %lg"; t->rgpadr[i++]=(void *) &t->updateCmode.maxtime;
+  t->rgsformat[i] = " resume %59s";    t->rgpadr[i++] = (void *) t->resumefile;
+  t->rgsformat[i] = " fac*maxFunEvals %lg";   t->rgpadr[i++] = (void *) &t->facmaxeval;
+  t->rgsformat[i] = " fac*updatecov %lg"; t->rgpadr[i++]=(void *) &t->facupdateCmode;
+  t->n1para = i; 
+  t->n1outpara = i-2; /* disregard last parameters in WriteToFile() */
+
+  /* arrays */
+  i = 0;
+  t->rgskeyar[i]  = " typicalX %d";   t->rgp2adr[i++] = &t->typicalX;
+  t->rgskeyar[i]  = " initialX %d";   t->rgp2adr[i++] = &t->xstart;
+  t->rgskeyar[i]  = " initialStandardDeviations %d"; t->rgp2adr[i++] = &t->rgInitialStds;
+  t->rgskeyar[i]  = " diffMinChange %d"; t->rgp2adr[i++] = &t->rgDiffMinChange;
+  t->n2para = i;  
+
+  t->N = dimension;
+  t->seed = (unsigned) inseed; 
+  t->xstart = NULL; 
+  t->typicalX = NULL;
+  t->typicalXcase = 0;
+  t->rgInitialStds = NULL; 
+  t->rgDiffMinChange = NULL; 
+  t->stopMaxFunEvals = stopMaxFunEvals;
+  t->stopMaxIter = stopMaxIter;
+  t->facmaxeval = 1; 
+  t->stStopFitness.flg = -1;
+  t->stopTolFun = stopTolFun; 
+  t->stopTolFunHist = stopTolFunHist; 
+  t->stopTolX = stopTolX; /* 1e-11*insigma would also be reasonable */ 
+  t->stopTolUpXFactor = stopTolUpXFactor; 
+
+  t->lambda = lambda;
+  t->mu = -1;
+  t->mucov = -1;
+  t->weights = NULL;
+  strcpy(t->weigkey, "log");
+
+  t->cs = -1;
+  t->ccumcov = -1;
+  t->damps = -1;
+  t->ccov = -1;
+
+  t->diagonalCov = 0; /* default is 0, but this might change in future, see below */
+
+  t->updateCmode.modulo = -1;  
+  t->updateCmode.maxtime = -1;
+  t->updateCmode.flgalways = 0;
+  t->facupdateCmode = 1;
+  strcpy(t->resumefile, "_no_");
+
+  N = t->N; 
+  if (t->xstart == NULL && inxstart == NULL && t->typicalX == NULL) {
+    ERRORMESSAGE("Error: initialX undefined. typicalX = 0.5...0.5 used.","","","");
+    printf("\nError: initialX undefined. typicalX = 0.5...0.5 used.\n");
+  }
+  if (t->rgInitialStds == NULL && stddev == NULL) {
+    /* FATAL("initialStandardDeviations undefined","","",""); */
+    ERRORMESSAGE("Error: initialStandardDeviations undefined. 0.3...0.3 used.","","","");
+    printf("\nError: initialStandardDeviations undefined. 0.3...0.3 used.\n");
+  }
+
+  if (t->rgInitialStds == NULL) {
+    t->rgInitialStds = new_double(N);
+  }
+  for (i=0; i<N; ++i)
+    t->rgInitialStds[i] = (stddev == NULL) ? 0.3 : stddev[i];
+
+  t->flgsupplemented = 0;
+}
+
+void
+cmaes_init_problem(cmaes_t *t, /* "this" */
+                int dimension, double *inxstart) 
+{
+  int N = t->N; /* dimension provided for stddev */
+  t->N = dimension;
+  if (dimension == 0)
+    FATAL("cmaes_readpara_t(): problem dimension N undefined.\n",
+          "  (no default value available).",0,0); 
+  if (t->xstart == NULL) {
+    t->xstart = new_double(dimension);    
+  } /* xstart != NULL */
+  /* put inxstart into xstart */
+  if (inxstart != NULL) { 
+    for (i=0; i<dimension; ++i)
+      t->xstart[i] = inxstart[i];
+  }
+}
+
+double *cmaes_optimize(cmaes_t *evo, double *x_in_bounds,
+                    int n_bounds, double *lowerBounds, double *upperBounds,
+                    double (*f)(double *x, int dimension, void *user_data),
+                    void *user_data)
+{
+  cmaes_boundary_transformation_t boundaries;
+  double *arFunvals, *const*pop;
+  unsigned long dimension;
+  int i; 
+  /* initialize boundaries, be sure that initialSigma is smaller than upper minus lower bound */
+  cmaes_boundary_transformation_init(&boundaries, lowerBounds, upperBounds, n_bounds);  
+  dimension = (unsigned long)cmaes_Get(evo, "dimension");
+  
+  printf("%s\n", cmaes_SayHello(evo));
+  
+  arFunvals = t->publicFitness;
+  
+  /* Iterate until stop criterion holds */
+  while(!cmaes_TestForTermination(evo))
+    { 
+      /* generate lambda new search points, sample population */
+      pop = cmaes_SamplePopulation(evo); /* do not change content of pop */
+
+      /* transform into bounds and evaluate the new search points */
+      for (i = 0; i < cmaes_Get(evo, "lambda"); ++i) {
+        cmaes_boundary_transformation(&boundaries, pop[i], x_in_bounds, dimension);
+        /* this loop can be omitted if is_feasible is invariably true */
+        while(!is_feasible(x_in_bounds, dimension)) { /* is_feasible needs to be user-defined, in case, and can change/repair x */
+            cmaes_ReSampleSingle(evo, i); 
+            cmaes_boundary_transformation(&boundaries, pop[i], x_in_bounds, dimension);
+        }
+        arFunvals[i] = (*f)(x_in_bounds, dimension, user_data); /* evaluate */
+      }
+
+      /* update the search distribution used for cmaes_SampleDistribution() */
+      cmaes_UpdateDistribution(&evo, arFunvals);  /* assumes that pop[i] has not been modified */
+
+      /* read instructions for printing output or changing termination conditions */ 
+      cmaes_ReadSignals(&evo, "cmaes_signals.par");
+    }
+  printf("Stop:\n%s\n",  cmaes_TestForTermination(&evo)); /* print termination reason */
+  cmaes_WriteToFile(&evo, "all", "allcmaes.dat");         /* write final results */
+  cmaes_boundary_transformation(&boundaries,
+		  (double const *) cmaes_GetPtr(&evo, "xmean"), /* "xbestever" might be used as well */
+		  x_in_bounds, dimension);
+ /* and finally release memory */
+  cmaes_exit(&evo); /* release memory */
+  cmaes_boundary_transformation_exit(&boundaries); /* release memory */  
+}
+/* QSPCC END */
+
 
 double * 
 cmaes_init_final(cmaes_t *t /* "this" */)
