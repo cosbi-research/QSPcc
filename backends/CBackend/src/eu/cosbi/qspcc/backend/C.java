@@ -7380,11 +7380,35 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 						dims = tmpdims;
 					} else
 						dims = new String[] { "1" };
-				}
+				}else {
+					// case randn and rand
+					if(dims.length == 1 && firstParamType.isCastableToScalar()) {
+						dims = new String[] { dims[0], dims[0] };
+					} else if(dims.length > 1 && firstParamType.isCastableToScalar()) {
+						// skip, dims is already filled with the dimensions
+					} else if (firstParamType.isCastableToMatrix()) {
+						// if single parameter of type matrix use matrix values
+						MatrixType mType = (MatrixType) firstParamType;
+						int tot=1;
+						for(IntType dim: mType.dims())
+							if(!dim.hasValue()) {
+								tot = -1;
+								break;
+							}else
+								tot *= dim.valueAsInt();
+						if(tot > 0) {
+							String[] mdims = new String[tot];
+							for(int i = 0 ; i < tot ; ++i)
+								mdims[i] = dims[0] + STRUCT_ACCESS + "matrix["+i+"]";
+							dims = mdims;
+						}else
+							throw new UndefinedTranslationException(CErrorMessage.UNSUPPORTED_FRONTEND_FUNCTION_ARGUMENT,
+									curApplyNode, functionName);						
+					} else
+						throw new UndefinedTranslationException(CErrorMessage.UNSUPPORTED_FRONTEND_FUNCTION_ARGUMENT,
+								curApplyNode, functionName);						
 
-				if (dims.length == 1)
-					// nxn matrix if just 1 dimension given
-					dims = new String[] { dims[0], dims[0] };
+				}
 
 				paramsize = dims.length;
 				if (outSymbolType != null && outSymbolType.isCastableToScalar()) {
