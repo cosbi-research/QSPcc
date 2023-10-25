@@ -34,6 +34,7 @@ all:
 	+$(MAKE) -C objs $(MAKEFILE)
 	cp objs/<PROGRAM_NAME> .
 	cp objs/simulation.sbatch .
+	cp plotcmaesdat.m plotcmaesdat.sci cmaes_signals.par .
 ifdef dump
 	cp objs/plot.sh .
 endif
@@ -50,5 +51,6 @@ clean:
 	rm -f <PROGRAM_NAME>
 	rm -f simulation.sbatch
 	rm -f plot.sh
+	rm -f plotcmaesdat.m plotcmaesdat.sci cmaes_signals.par allcmaes.dat
 	
 	
