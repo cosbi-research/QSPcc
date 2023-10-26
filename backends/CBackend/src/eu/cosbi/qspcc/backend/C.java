@@ -11866,7 +11866,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		} else {
 			StringBuffer sb = new StringBuffer();
 			if (forceStatic)
-				sb.append("static __thread ");
+				sb.append("static ");
 			// define symbol
 			sb.append("char *").append(symbol);
 			if (value != null) {
