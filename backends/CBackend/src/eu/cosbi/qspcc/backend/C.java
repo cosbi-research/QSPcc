@@ -12617,6 +12617,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		writer.append("#include <stdlib.h>" + NL);
 		writer.append("#include <nvector/nvector_serial.h>" + NL);
 		writer.append("#include <sundials/sundials_types.h>" + NL);
+		writer.append("#include \"cmaes_interface.h\"" + NL);
 		writer.append("#include \"structures.h\"" + NL);
 		writer.append("#include \"load-structures.h\"" + NL);
 		writer.append("#include \"user-structures.h\"" + NL);
