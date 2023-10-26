@@ -32,7 +32,7 @@ void cmaes_init_options(cmaes_t *,
 		double stopTolX, double stopTolUpXFactor
 		);
 void cmaes_init_problem(cmaes_t *, int dimension, double *xstart);
-double *cmaes_optimize(cmaes_t *, double *xopt, 
+void cmaes_optimize(cmaes_t *, double *xopt, 
                     int n_bounds, double *lowerBounds, double *upperBounds,
                     double (*f)(double *x, int dimension, void *user_data),
                     void *user_data);

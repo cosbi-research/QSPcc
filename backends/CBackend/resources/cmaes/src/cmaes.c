@@ -280,125 +280,138 @@ cmaes_init_options(cmaes_t *t, /* "this" */
 		double stopTolX, double stopTolUpXFactor)
 {
   int i, N;
+  t->version = c_cmaes_version;
+  cmaes_readpara_t * sp = &t->sp;
   /* TODO: make sure cmaes_readpara_init has not been called already */
-  t->filename = NULL; /* set after successful Read */
-  t->rgsformat = (const char **) new_void(55, sizeof(char *));
-  t->rgpadr = (void **) new_void(55, sizeof(void *)); 
-  t->rgskeyar = (const char **) new_void(11, sizeof(char *));
-  t->rgp2adr = (double ***) new_void(11, sizeof(double **));
-  t->weigkey = (char *)new_void(7, sizeof(char)); 
+  sp->filename = NULL; /* set after successful Read */
+  sp->rgsformat = (const char **) new_void(55, sizeof(char *));
+  sp->rgpadr = (void **) new_void(55, sizeof(void *)); 
+  sp->rgskeyar = (const char **) new_void(11, sizeof(char *));
+  sp->rgp2adr = (double ***) new_void(11, sizeof(double **));
+  sp->weigkey = (char *)new_void(7, sizeof(char)); 
 
   /* All scalars:  */
   i = 0;
-  t->rgsformat[i] = " N %d";        t->rgpadr[i++] = (void *) &t->N; 
-  t->rgsformat[i] = " seed %d";    t->rgpadr[i++] = (void *) &t->seed;
-  t->rgsformat[i] = " stopMaxFunEvals %lg"; t->rgpadr[i++] = (void *) &t->stopMaxFunEvals;
-  t->rgsformat[i] = " stopMaxIter %lg"; t->rgpadr[i++] = (void *) &t->stopMaxIter;
-  t->rgsformat[i] = " stopFitness %lg"; t->rgpadr[i++]=(void *) &t->stStopFitness.val;
-  t->rgsformat[i] = " stopTolFun %lg"; t->rgpadr[i++]=(void *) &t->stopTolFun;
-  t->rgsformat[i] = " stopTolFunHist %lg"; t->rgpadr[i++]=(void *) &t->stopTolFunHist;
-  t->rgsformat[i] = " stopTolX %lg"; t->rgpadr[i++]=(void *) &t->stopTolX;
-  t->rgsformat[i] = " stopTolUpXFactor %lg"; t->rgpadr[i++]=(void *) &t->stopTolUpXFactor;
-  t->rgsformat[i] = " lambda %d";      t->rgpadr[i++] = (void *) &t->lambda;
-  t->rgsformat[i] = " mu %d";          t->rgpadr[i++] = (void *) &t->mu;
-  t->rgsformat[i] = " weights %5s";    t->rgpadr[i++] = (void *) t->weigkey;
-  t->rgsformat[i] = " fac*cs %lg";t->rgpadr[i++] = (void *) &t->cs;
-  t->rgsformat[i] = " fac*damps %lg";   t->rgpadr[i++] = (void *) &t->damps;
-  t->rgsformat[i] = " ccumcov %lg";    t->rgpadr[i++] = (void *) &t->ccumcov;
-  t->rgsformat[i] = " mucov %lg";     t->rgpadr[i++] = (void *) &t->mucov;
-  t->rgsformat[i] = " fac*ccov %lg";  t->rgpadr[i++]=(void *) &t->ccov;
-  t->rgsformat[i] = " diagonalCovarianceMatrix %lg"; t->rgpadr[i++]=(void *) &t->diagonalCov;
-  t->rgsformat[i] = " updatecov %lg"; t->rgpadr[i++]=(void *) &t->updateCmode.modulo;
-  t->rgsformat[i] = " maxTimeFractionForEigendecompostion %lg"; t->rgpadr[i++]=(void *) &t->updateCmode.maxtime;
-  t->rgsformat[i] = " resume %59s";    t->rgpadr[i++] = (void *) t->resumefile;
-  t->rgsformat[i] = " fac*maxFunEvals %lg";   t->rgpadr[i++] = (void *) &t->facmaxeval;
-  t->rgsformat[i] = " fac*updatecov %lg"; t->rgpadr[i++]=(void *) &t->facupdateCmode;
-  t->n1para = i; 
-  t->n1outpara = i-2; /* disregard last parameters in WriteToFile() */
+  sp->rgsformat[i] = " N %d";        sp->rgpadr[i++] = (void *) &sp->N; 
+  sp->rgsformat[i] = " seed %d";    sp->rgpadr[i++] = (void *) &sp->seed;
+  sp->rgsformat[i] = " stopMaxFunEvals %lg"; sp->rgpadr[i++] = (void *) &sp->stopMaxFunEvals;
+  sp->rgsformat[i] = " stopMaxIter %lg"; sp->rgpadr[i++] = (void *) &sp->stopMaxIter;
+  sp->rgsformat[i] = " stopFitness %lg"; sp->rgpadr[i++]=(void *) &sp->stStopFitness.val;
+  sp->rgsformat[i] = " stopTolFun %lg"; sp->rgpadr[i++]=(void *) &sp->stopTolFun;
+  sp->rgsformat[i] = " stopTolFunHist %lg"; sp->rgpadr[i++]=(void *) &sp->stopTolFunHist;
+  sp->rgsformat[i] = " stopTolX %lg"; sp->rgpadr[i++]=(void *) &sp->stopTolX;
+  sp->rgsformat[i] = " stopTolUpXFactor %lg"; sp->rgpadr[i++]=(void *) &sp->stopTolUpXFactor;
+  sp->rgsformat[i] = " lambda %d";      sp->rgpadr[i++] = (void *) &sp->lambda;
+  sp->rgsformat[i] = " mu %d";          sp->rgpadr[i++] = (void *) &sp->mu;
+  sp->rgsformat[i] = " weights %5s";    sp->rgpadr[i++] = (void *) sp->weigkey;
+  sp->rgsformat[i] = " fac*cs %lg";sp->rgpadr[i++] = (void *) &sp->cs;
+  sp->rgsformat[i] = " fac*damps %lg";   sp->rgpadr[i++] = (void *) &sp->damps;
+  sp->rgsformat[i] = " ccumcov %lg";    sp->rgpadr[i++] = (void *) &sp->ccumcov;
+  sp->rgsformat[i] = " mucov %lg";     sp->rgpadr[i++] = (void *) &sp->mucov;
+  sp->rgsformat[i] = " fac*ccov %lg";  sp->rgpadr[i++]=(void *) &sp->ccov;
+  sp->rgsformat[i] = " diagonalCovarianceMatrix %lg"; sp->rgpadr[i++]=(void *) &sp->diagonalCov;
+  sp->rgsformat[i] = " updatecov %lg"; sp->rgpadr[i++]=(void *) &sp->updateCmode.modulo;
+  sp->rgsformat[i] = " maxTimeFractionForEigendecompostion %lg"; sp->rgpadr[i++]=(void *) &sp->updateCmode.maxtime;
+  sp->rgsformat[i] = " resume %59s";    sp->rgpadr[i++] = (void *) sp->resumefile;
+  sp->rgsformat[i] = " fac*maxFunEvals %lg";   sp->rgpadr[i++] = (void *) &sp->facmaxeval;
+  sp->rgsformat[i] = " fac*updatecov %lg"; sp->rgpadr[i++]=(void *) &sp->facupdateCmode;
+  sp->n1para = i; 
+  sp->n1outpara = i-2; /* disregard last parameters in WriteToFile() */
 
   /* arrays */
   i = 0;
-  t->rgskeyar[i]  = " typicalX %d";   t->rgp2adr[i++] = &t->typicalX;
-  t->rgskeyar[i]  = " initialX %d";   t->rgp2adr[i++] = &t->xstart;
-  t->rgskeyar[i]  = " initialStandardDeviations %d"; t->rgp2adr[i++] = &t->rgInitialStds;
-  t->rgskeyar[i]  = " diffMinChange %d"; t->rgp2adr[i++] = &t->rgDiffMinChange;
-  t->n2para = i;  
+  sp->rgskeyar[i]  = " typicalX %d";   sp->rgp2adr[i++] = &sp->typicalX;
+  sp->rgskeyar[i]  = " initialX %d";   sp->rgp2adr[i++] = &sp->xstart;
+  sp->rgskeyar[i]  = " initialStandardDeviations %d"; sp->rgp2adr[i++] = &sp->rgInitialStds;
+  sp->rgskeyar[i]  = " diffMinChange %d"; sp->rgp2adr[i++] = &sp->rgDiffMinChange;
+  sp->n2para = i;  
 
-  t->N = dimension;
-  t->seed = (unsigned) inseed; 
-  t->xstart = NULL; 
-  t->typicalX = NULL;
-  t->typicalXcase = 0;
-  t->rgInitialStds = NULL; 
-  t->rgDiffMinChange = NULL; 
-  t->stopMaxFunEvals = stopMaxFunEvals;
-  t->stopMaxIter = stopMaxIter;
-  t->facmaxeval = 1; 
-  t->stStopFitness.flg = -1;
-  t->stopTolFun = stopTolFun; 
-  t->stopTolFunHist = stopTolFunHist; 
-  t->stopTolX = stopTolX; /* 1e-11*insigma would also be reasonable */ 
-  t->stopTolUpXFactor = stopTolUpXFactor; 
+  sp->N = dimension;
+  sp->seed = (unsigned) seed; 
+  sp->xstart = NULL; 
+  sp->typicalX = NULL;
+  sp->typicalXcase = 0;
+  sp->rgInitialStds = NULL; 
+  sp->rgDiffMinChange = NULL; 
+  sp->stopMaxFunEvals = stopMaxFunEvals;
+  sp->stopMaxIter = stopMaxIter;
+  sp->facmaxeval = 1; 
+  sp->stStopFitness.flg = -1;
+  sp->stopTolFun = stopTolFun; 
+  sp->stopTolFunHist = stopTolFunHist; 
+  sp->stopTolX = stopTolX; /* 1e-11*insigma would also be reasonable */ 
+  sp->stopTolUpXFactor = stopTolUpXFactor; 
 
-  t->lambda = lambda;
-  t->mu = -1;
-  t->mucov = -1;
-  t->weights = NULL;
-  strcpy(t->weigkey, "log");
+  sp->lambda = lambda;
+  sp->mu = -1;
+  sp->mucov = -1;
+  sp->weights = NULL;
+  strcpy(sp->weigkey, "log");
 
-  t->cs = -1;
-  t->ccumcov = -1;
-  t->damps = -1;
-  t->ccov = -1;
+  sp->cs = -1;
+  sp->ccumcov = -1;
+  sp->damps = -1;
+  sp->ccov = -1;
 
-  t->diagonalCov = 0; /* default is 0, but this might change in future, see below */
+  sp->diagonalCov = 0; /* default is 0, but this might change in future, see below */
 
-  t->updateCmode.modulo = -1;  
-  t->updateCmode.maxtime = -1;
-  t->updateCmode.flgalways = 0;
-  t->facupdateCmode = 1;
-  strcpy(t->resumefile, "_no_");
+  sp->updateCmode.modulo = -1;  
+  sp->updateCmode.maxtime = -1;
+  sp->updateCmode.flgalways = 0;
+  sp->facupdateCmode = 1;
+  strcpy(sp->resumefile, "_no_");
 
-  N = t->N; 
-  if (t->xstart == NULL && inxstart == NULL && t->typicalX == NULL) {
-    ERRORMESSAGE("Error: initialX undefined. typicalX = 0.5...0.5 used.","","","");
-    printf("\nError: initialX undefined. typicalX = 0.5...0.5 used.\n");
-  }
-  if (t->rgInitialStds == NULL && stddev == NULL) {
+  N = sp->N; 
+  if (sp->rgInitialStds == NULL && stddev == NULL) {
     /* FATAL("initialStandardDeviations undefined","","",""); */
     ERRORMESSAGE("Error: initialStandardDeviations undefined. 0.3...0.3 used.","","","");
     printf("\nError: initialStandardDeviations undefined. 0.3...0.3 used.\n");
   }
 
-  if (t->rgInitialStds == NULL) {
-    t->rgInitialStds = new_double(N);
+  if (sp->rgInitialStds == NULL) {
+    sp->rgInitialStds = new_double(N);
   }
   for (i=0; i<N; ++i)
-    t->rgInitialStds[i] = (stddev == NULL) ? 0.3 : stddev[i];
+    sp->rgInitialStds[i] = (stddev == NULL) ? 0.3 : stddev[i];
 
-  t->flgsupplemented = 0;
+  sp->flgsupplemented = 0;
 }
 
 void
 cmaes_init_problem(cmaes_t *t, /* "this" */
                 int dimension, double *inxstart) 
 {
-  int N = t->N; /* dimension provided for stddev */
-  t->N = dimension;
+  cmaes_readpara_t * sp = &t->sp;
+  int N = sp->N; /* dimension provided for stddev */
+  int i;
+  sp->N = dimension;
   if (dimension == 0)
     FATAL("cmaes_readpara_t(): problem dimension N undefined.\n",
           "  (no default value available).",0,0); 
-  if (t->xstart == NULL) {
-    t->xstart = new_double(dimension);    
+  if (sp->xstart == NULL && inxstart == NULL && sp->typicalX == NULL) {
+    ERRORMESSAGE("Error: initialX undefined. typicalX = 0.5...0.5 used.","","","");
+    printf("\nError: initialX undefined. typicalX = 0.5...0.5 used.\n");
+  }
+
+  if (sp->xstart == NULL) {
+    sp->xstart = new_double(dimension);    
   } /* xstart != NULL */
   /* put inxstart into xstart */
   if (inxstart != NULL) { 
     for (i=0; i<dimension; ++i)
-      t->xstart[i] = inxstart[i];
+      sp->xstart[i] = inxstart[i];
   }
 }
 
-double *cmaes_optimize(cmaes_t *evo, double *x_in_bounds,
+/**
+ * can be edited by the user,
+ * allows to change/repair solution
+ */
+static inline int is_feasible(double const *x, unsigned long N) {
+    return 1;
+}
+
+void cmaes_optimize(cmaes_t *evo, double *x_in_bounds,
                     int n_bounds, double *lowerBounds, double *upperBounds,
                     double (*f)(double *x, int dimension, void *user_data),
                     void *user_data)
@@ -406,14 +419,18 @@ double *cmaes_optimize(cmaes_t *evo, double *x_in_bounds,
   cmaes_boundary_transformation_t boundaries;
   double *arFunvals, *const*pop;
   unsigned long dimension;
+  cmaes_readpara_t * sp = &evo->sp;
   int i; 
   /* initialize boundaries, be sure that initialSigma is smaller than upper minus lower bound */
   cmaes_boundary_transformation_init(&boundaries, lowerBounds, upperBounds, n_bounds);  
   dimension = (unsigned long)cmaes_Get(evo, "dimension");
   
+  /* initialize starting point */
+  memcpy(x_in_bounds, sp->xstart, dimension*sizeof(double));
+  
   printf("%s\n", cmaes_SayHello(evo));
   
-  arFunvals = t->publicFitness;
+  arFunvals = evo->publicFitness;
   
   /* Iterate until stop criterion holds */
   while(!cmaes_TestForTermination(evo))
@@ -433,18 +450,18 @@ double *cmaes_optimize(cmaes_t *evo, double *x_in_bounds,
       }
 
       /* update the search distribution used for cmaes_SampleDistribution() */
-      cmaes_UpdateDistribution(&evo, arFunvals);  /* assumes that pop[i] has not been modified */
+      cmaes_UpdateDistribution(evo, arFunvals);  /* assumes that pop[i] has not been modified */
 
       /* read instructions for printing output or changing termination conditions */ 
-      cmaes_ReadSignals(&evo, "cmaes_signals.par");
+      cmaes_ReadSignals(evo, "cmaes_signals.par");
     }
-  printf("Stop:\n%s\n",  cmaes_TestForTermination(&evo)); /* print termination reason */
-  cmaes_WriteToFile(&evo, "all", "allcmaes.dat");         /* write final results */
+  printf("Stop:\n%s\n",  cmaes_TestForTermination(evo)); /* print termination reason */
+  cmaes_WriteToFile(evo, "all", "allcmaes.dat");         /* write final results */
   cmaes_boundary_transformation(&boundaries,
-		  (double const *) cmaes_GetPtr(&evo, "xmean"), /* "xbestever" might be used as well */
+		  (double const *) cmaes_GetPtr(evo, "xmean"), /* "xbestever" might be used as well */
 		  x_in_bounds, dimension);
  /* and finally release memory */
-  cmaes_exit(&evo); /* release memory */
+  cmaes_exit(evo); /* release memory */
   cmaes_boundary_transformation_exit(&boundaries); /* release memory */  
 }
 /* QSPCC END */
