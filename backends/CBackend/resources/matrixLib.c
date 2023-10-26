@@ -404,7 +404,7 @@ double *vdLogSequenceVector(double *out_vector, double start, double step, doubl
 	double expStart=pow(10, start);
 	double expEnd=pow(10, end);
 	#pragma omp smid
-	for(double i=expStart; i < (expEnd + SEQUENCE_TOL) ; i += step)
+	for(double i=expStart; fabs(i - (expEnd + step)) >= SEQUENCE_TOL ; i += step)
 		out_vector[midx++] = pow(10, i);
 	return out_vector;	
 }
@@ -412,8 +412,9 @@ double *vdLogSequenceVector(double *out_vector, double start, double step, doubl
 // equivalent to MATLAB linspace, compute the full vector given a slice in a logspace
 double *vdSequenceVector(double *out_vector, double start, double step, double end){
 	int midx = 0;
+	double i;
 	#pragma omp smid
-	for(double i=start; i < (end + SEQUENCE_TOL) ; i += step)
+	for(i=start; fabs(i - (end + step)) >= SEQUENCE_TOL ; i += step)
 		out_vector[midx++] = i;
 	return out_vector;	
 }
