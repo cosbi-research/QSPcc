@@ -94,7 +94,7 @@ LIBRARIES_KLU =
 LIBRARIES_PETSC = 
 
 EXAMPLES =  <PROGRAM_NAME>
-EXAMPLES_DEPENDENCIES = <DEPENDENCIES> memoryLib matrixLib sparseLib sundialsLib loadLib saveLib user_structures loaded-csv
+EXAMPLES_DEPENDENCIES = <DEPENDENCIES> memoryLib matrixLib sparseLib sundialsLib loadLib saveLib user_structures loaded-csv cmaes boundary_transformation
 
 OBJECTS = ${EXAMPLES:=.o}
 OBJECTS_DEPENDENCIES = ${EXAMPLES_DEPENDENCIES:=.o}
