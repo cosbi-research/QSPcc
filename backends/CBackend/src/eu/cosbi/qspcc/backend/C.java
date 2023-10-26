@@ -8327,10 +8327,21 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 					createVariable(outNode);
 					ensureMatrixMemory(sb, outSymbol, strOutSymbol, outMatType.dims());
 					// fill out matrix with the dimension of the param matrix
-					for (int i = 1; i <= dtype.dims().length; ++i)
+					if(paramType.equals(BType.MATRIX))
+						for (int i = 1; i <= dtype.dims().length; ++i)
+							sb.append(indentTabs()).append(strOutSymbol).append(STRUCT_ACCESS)
+							  .append("matrix[" + Integer.toString(i - 1) + "]").append(" = ")
+							  .append(TypeUtils.matrixDimName(paramName, i)).append(";").append(NL);
+					else {
+						// matrix access slice
+						SliceType sType = (SliceType) paramType;
+						IntType sdim = sType.dim();
 						sb.append(indentTabs()).append(strOutSymbol).append(STRUCT_ACCESS)
-								.append("matrix[" + Integer.toString(i - 1) + "]").append(" = ")
-								.append(TypeUtils.matrixDimName(paramName, i)).append(";").append(NL);
+						  .append("matrix[0]").append(" = ")
+						  .append(TypeUtils.matrixDimName(paramName, 1)).append(";").append(NL);
+						sb.append(indentTabs()).append(strOutSymbol).append(STRUCT_ACCESS)
+						  .append("matrix[1]").append(" = 1;").append(NL);
+					}
 				} else if (isScalar && paramsTranslatedArr.length > 1) {
 					String s = paramsTranslatedArr[1];
 					int i;
