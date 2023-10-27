@@ -1162,10 +1162,10 @@ public class TypeUtils {
 		    if (!actualFunEnvParams.contains(p))
 			actualFunParams.add(p);
 
-		if (formalFunType.inputs().size() != actualParamChilds.size()) {
+		if (formalFunType.inputs().size() != actualFunParams.size()) {
 		    TypeException ex = new TypeException(ErrorMessage.FUN_FUNCTIONAL_PARAM_N_PARAM_VALUES_DONT_MATCH,
 			    applyNode, funNode.child(NodeType.ID).name(), actualFunNode.child(NodeType.ID).name(),
-			    actualParamChilds.size(), formalFunType.inputs().size());
+			    actualFunParams.size(), formalFunType.inputs().size());
 		    String message = ex.stringify();
 		    actualParam.error(new TypeError(message, Thread.currentThread().getStackTrace()));
 		    throw ex;
