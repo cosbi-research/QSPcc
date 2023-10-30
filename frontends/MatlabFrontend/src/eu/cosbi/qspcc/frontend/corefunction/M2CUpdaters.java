@@ -17,6 +17,7 @@ import eu.cosbi.qspcc.ast.attrs.NodeAttr;
 import eu.cosbi.qspcc.exceptions.CastException;
 import eu.cosbi.qspcc.exceptions.ErrorMessage;
 import eu.cosbi.qspcc.exceptions.GException;
+import eu.cosbi.qspcc.exceptions.TypeError;
 import eu.cosbi.qspcc.exceptions.TypeException;
 import eu.cosbi.qspcc.expressions.type.DimensionType;
 import eu.cosbi.qspcc.expressions.type.FunctionType;
@@ -794,15 +795,38 @@ public class M2CUpdaters {
 	    FunctionType integratorType;
 
 	    GType initialConditions = paramTypes.get(1);
+		GType firstParamType=GType.get(initialConditions);
+
 	    if (!initialConditions.equals(BType.UNKNOWN)) {
 		if (!(initialConditions instanceof DimensionType))
 		    return new GType[] { GType.get(BType.UNDEFINED).name(
 			    "Function lsqnonlin initial conditions should be of type matrix, not " + initialConditions) };
 
+		List<AASTNode> actualParamListExpr = node.childs(NodeType.FUNCTION_PARAMETER_LIST);
+		if(actualParamListExpr!=null && !actualParamListExpr.isEmpty()) {			
+			AASTNode actualFunParamList = TypeUtils.getIDNode(actualParamListExpr.get(0));
+			List<AASTNode> formalFunParamList = actualFunParamList.childs(NodeType.PARAMETER_LIST);
+			List<AASTNode> noenvFunParamList = new ArrayList<AASTNode>();
+			for(AASTNode n : formalFunParamList)
+				if(!n.hasAttr(NodeAttr.IS_FUNCTION_ENV_PARAM))
+					noenvFunParamList.add(n);
+			
+			if(noenvFunParamList.isEmpty() || noenvFunParamList.size() > 1) {
+				TypeException ex = new TypeException(ErrorMessage.FUN_FUNCTIONAL_PARAM_N_PARAM_VALUES_DONT_MATCH, node, 
+				  		node.child(NodeType.ID).name(),
+				   		actualFunParamList.child(NodeType.ID).name(),
+				   		noenvFunParamList.size(), 1);
+				node.error(new TypeError(ex.stringify(), Thread.currentThread().getStackTrace()));
+			}else {
+				firstParamType.name(noenvFunParamList.get(0).name());				
+			}
+			
+		}
+
 		// update param and return type
-	    integratorType = (FunctionType) GType.get(paramTypes.get(0));
-	    integratorType.input(0, GType.get(initialConditions));
-	    integratorType.output(0, GType.get(initialConditions));
+	    integratorType = (FunctionType) GType.get(BType.FUNCTION,
+    		    new GType[] { firstParamType },
+    		    new GType[] { GType.get(firstParamType).name("opt_out") });
 	    
 	    } else
 		integratorType = (FunctionType) GType.get(BType.FUNCTION,
@@ -841,7 +865,7 @@ public class M2CUpdaters {
 			    formalParametersUnknown, actualParametersUnknown, envParametersUnknown,
 			    coreFun, funIdNode.name());
 		    node.deferrableError(ErrorMessage.FUN_FORMAL_PARAMS_UNKNOWN, ex);
-	    }	    
+	    }
 	    return new GType[] { integratorType, GType.get(initialConditions), lb, ub, GType.get(paramTypes.get(4)) };
 
 	};
