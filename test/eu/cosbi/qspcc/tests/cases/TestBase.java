@@ -145,6 +145,8 @@ public class TestBase {
 		sunversion = "sundials_v4";
 	    else if ("5".equals(sunver))
 		sunversion = "sundials_v5";
+	    else if ("6".equals(sunver))
+		sunversion = "sundials_v6";
 	    else
 		sunversion = "sundials_v" + sunver;
 
