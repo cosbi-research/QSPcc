@@ -242,7 +242,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 	// C-backend specific options
 	protected String programName = null;
 	protected String sundialsVersion = null;
-	protected List<String> supportedSundialsVersions = Arrays.asList("5", "2", "3", "4");
+	protected List<String> supportedSundialsVersions = Arrays.asList("6", "5", "2", "3", "4");
 	protected Path sunincludepath = null;
 	protected Path sunlibpath = null;
 	protected Path stdlibpath = null;
@@ -9972,7 +9972,10 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			// the ODE init, with which you can initialize the solver
 
 			String yLength = String.join("*", y0DimsAsStrings);
-			structUserDataPointer = "&" + structUserDataName;
+			if(!structUserDataName.equals("NULL"))
+				structUserDataPointer = "&" + structUserDataName;
+			else
+				structUserDataPointer = structUserDataName;
 			bufferStmt.append(sundialInitializerName).append(" = sun_init_" + suffix + "(")
 					.append(sundialInitializerName).append(", ").append(wrappedFunctionName).append(", ")
 					.append(getPointerSymbol(y0Symbol)).append(", ").append(yLength).append(", ").append(startTime)
@@ -12936,7 +12939,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 					throw new InputException(CErrorMessage.USER_CLI_PARAM_EXCEPTION, null, SUN_VER_OPTION,
 							supportedSundialsVersions, sundialsVersion);
 			} catch (Exception e) {
-				throw new InputException(CErrorMessage.USER_CLI_PARAM_EXCEPTION, null, SUN_VER_OPTION, sundialsVersion);
+				throw new InputException(CErrorMessage.USER_CLI_PARAM_EXCEPTION, null, SUN_VER_OPTION, supportedSundialsVersions, sundialsVersion);
 			}
 		} else
 			sundialsVersion = defaultSunVer;
