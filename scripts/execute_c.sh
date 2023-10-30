@@ -1,7 +1,7 @@
 #!/bin/bash
 
-SUNDIALS_VERSIONS=(5_0)
-TESTS=(sundials_v5)
+SUNDIALS_VERSIONS=(6_0)
+TESTS=(sundials_v6)
 
 for sundials_ver in ${SUNDIALS_VERSIONS[*]}; do
 for test_set in ${TESTS[*]}; do

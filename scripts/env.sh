@@ -12,6 +12,9 @@ export SUN_4_1_LIB_PATH=/usr/local/sundials-4.1.0/lib
 # sundials 5 include and lib directory
 export SUN_5_0_INCLUDE_PATH=/usr/local/sundials-5.7.0/include
 export SUN_5_0_LIB_PATH=/usr/local/sundials-5.7.0/lib
+# sundials 5 include and lib directory
+export SUN_6_0_INCLUDE_PATH=/usr/local/sundials-6.2.0/include
+export SUN_6_0_LIB_PATH=/usr/local/sundials-6.2.0/lib
 # standard C libraries dir, usually shouldn't be changed
 export STD_LIB_PATH=/usr/lib
 # tcmalloc include and lib directory (for efficient memory handling)
