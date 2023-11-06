@@ -13039,6 +13039,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		ussunwriter.write("#include \"load-structures.h\"" + NL);
 		ussunwriter.write("#include \"user-structures.h\"" + NL);
 		ussunwriter.write("#include \"matrixLib.h\"" + NL + NL);
+		ussunwriter.write("#include \"sundialsLib.h\"" + NL + NL);
 		ussunwriter.write("#include \"cmaes_interface.h\"" + NL + NL);
 
 		// write header only in main
