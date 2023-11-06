@@ -1216,6 +1216,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 						if (formalParams.size() > actualParams.length) {
 							for (; i < formalParams.size() - actualParams.length; ++i)
 								if (formalParams.get(i).expr() != null
+										&& !formalParams.get(i).expr().equals(BType.FUNCTION)
 										&& !formalParams.get(i).expr().equals(BType.VOID))
 									newParams.add(getNullValue(formalParams.get(i)));
 						}
