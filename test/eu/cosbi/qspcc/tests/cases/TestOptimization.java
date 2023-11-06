@@ -24,4 +24,16 @@ public class TestOptimization extends TestBase {
 	// compileAndRunC(programName.replace(".m", ""), folderpath);
     }
 
+    @Test
+    public void testIntegrationOptimization() throws Exception {
+	Path folderpath = Paths.get(basePath, "tests", "optim", "simulation");
+	String programName = "main.m";
+	// TODO Alessio doesn't work in R
+	if (targetLanguage.equalsIgnoreCase("R"))
+	    return;
+
+	translate(programName, folderpath);
+	// compileAndRunC(programName.replace(".m", ""), folderpath);
+    }
+
 }
