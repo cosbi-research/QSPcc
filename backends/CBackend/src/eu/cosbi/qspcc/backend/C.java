@@ -12559,6 +12559,8 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		sb.append(TAB + "printf(\"" + Constants.programName
 				+ ": Copyright (c) 2021, Fondazione The Microsoft Research - University of Trento Centre for Computational and Systems Biology (COSBI). All rights reserved.\\n\");"
 				+ NL);
+		sb.append(TAB + "printf(\"C-CMAES: Copyright (c) 2014 Nikolaus Hansen. All rights reserved.\\n\");"
+				+ NL);
 
 		sb.append("#ifdef TCMALLOC" + NL);
 		sb.append(TAB + "printf(\"TC Malloc: Copyright (c) 2005, Google Inc. All rights reserved.\\n\");" + NL);
