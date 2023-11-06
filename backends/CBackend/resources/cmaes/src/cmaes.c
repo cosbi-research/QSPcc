@@ -368,7 +368,7 @@ cmaes_init_options(cmaes_t *t, /* "this" */
     printf("\nError: initialStandardDeviations undefined. 0.3...0.3 used.\n");
   }
 
-  if (sp->rgInitialStds == NULL) {
+  if (sp->rgInitialStds == NULL && N > 0) {
     sp->rgInitialStds = new_double(N);
   }
   for (i=0; i<N; ++i)
@@ -401,6 +401,11 @@ cmaes_init_problem(cmaes_t *t, /* "this" */
     for (i=0; i<dimension; ++i)
       sp->xstart[i] = inxstart[i];
   }
+  if (sp->rgInitialStds == NULL && dimension > 0) {
+    sp->rgInitialStds = new_double(dimension);
+  }
+  for (i=0; i<dimension; ++i)
+    sp->rgInitialStds[i] = 0.3;
 }
 
 /**
