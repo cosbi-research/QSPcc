@@ -97,6 +97,7 @@ Also downgraded to antlr3 to take advantage of the tree rewriting feature.
 == c-cmaes copyright notice ==
 
 Copyright (c) 2014 Nikolaus Hansen
+Copyright (c) 2023 Fondazione the Microsoft Research - University of Trento Centre for Computational and Systems Biology (COSBI)
 All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
