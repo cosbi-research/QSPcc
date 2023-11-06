@@ -10267,9 +10267,13 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 				for (AASTNode environmentVariable : envParams) {
 					String name = environmentVariable.symbol();
 					GType eexpr = environmentVariable.expr();
-					bufferStmt.append(USER_DATA_VARIABLE_PREFIX).append(user_data_variable_number)
-							.append(STRUCT_ACCESS).append(name).append("=").append(name).append(";").append(NL);
-
+					if(eexpr.equals(BType.STRUCT) && !userDefinedStructure((StructType) eexpr))
+						bufferStmt.append(USER_DATA_VARIABLE_PREFIX).append(user_data_variable_number)
+							.append(STRUCT_ACCESS).append(name).append("= *").append(name).append(";").append(NL);
+					else
+						bufferStmt.append(USER_DATA_VARIABLE_PREFIX).append(user_data_variable_number)
+						.append(STRUCT_ACCESS).append(name).append("=").append(name).append(";").append(NL);
+						
 					if (eexpr != null && eexpr.equals(BType.STRUCT) && eexpr.isInput()) {
 						// add also field with input structure this structure depends on
 						bufferStmt.append(USER_DATA_VARIABLE_PREFIX).append(user_data_variable_number)
@@ -10795,7 +10799,11 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 				bufferToWriteOn.append(",");
 				firstEnvironmentParameter = false;
 			}
-			bufferToWriteOn.append("temp->" + extraParam.symbol() + ",");
+			GType eexpr = getExprGeneralized(extraParam);
+			if(eexpr.equals(BType.STRUCT) && !userDefinedStructure((StructType) eexpr))
+				bufferToWriteOn.append("&temp->" + extraParam.symbol() + ",");
+			else
+				bufferToWriteOn.append("temp->" + extraParam.symbol() + ",");
 			GType pexpr = extraParam.expr();
 			if (pexpr != null && pexpr.equals(BType.STRUCT) && pexpr.isInput()) {
 				// add input symbol this structure depends on
@@ -10951,7 +10959,11 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 					bufferToWriteOn.append(",");
 					firstEnvironmentParameter = false;
 				}
-				bufferToWriteOn.append("temp->" + extraParam.symbol() + ",");
+				GType eexpr = getExprGeneralized(extraParam);
+				if(eexpr.equals(BType.STRUCT) && !userDefinedStructure((StructType) eexpr))
+					bufferToWriteOn.append("&temp->" + extraParam.symbol() + ",");
+				else
+					bufferToWriteOn.append("temp->" + extraParam.symbol() + ",");
 				GType pexpr = extraParam.expr();
 				if (pexpr != null && pexpr.equals(BType.STRUCT) && pexpr.isInput()) {
 					// add input symbol this structure depends on
@@ -10996,7 +11008,11 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 					bufferToWriteOn.append(",");
 					firstEnvironmentAParameter = false;
 				}
-				bufferToWriteOn.append("temp->" + parameterNode.symbol() + ",");
+				GType eexpr = getExprGeneralized(parameterNode);
+				if(eexpr.equals(BType.STRUCT) && !userDefinedStructure((StructType) eexpr))
+					bufferToWriteOn.append("&temp->" + parameterNode.symbol() + ",");
+				else
+					bufferToWriteOn.append("temp->" + parameterNode.symbol() + ",");
 				GType pexpr = parameterNode.expr();
 				if (pexpr != null && pexpr.isInput()) {
 					// add input symbol this structure depends on
