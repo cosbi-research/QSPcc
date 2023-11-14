@@ -15,8 +15,10 @@ x = lsqnonlin(@(r) odesystem(d,r,y0,odeoptions) - y, x0, lb, ub, options);
 
 disp(sprintf('Best solution: %f', x(1)))
 % MATLAB OUTPUT (2023): Best solution: 0.228230
+% QSPCC  OUTPUT       : Best solution: 0.231170
 disp(toc);
 % MATLAB OUTPUT (2023): 0.5081
+% QSPCC  OUTPUT       : 6.69e-2
 
 function y=odesystem(d, r, y0, odeoptions)
   [t,y] = ode15s(@(t,y) -r*t, d, y0, odeoptions);
