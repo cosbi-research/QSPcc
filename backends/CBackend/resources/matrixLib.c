@@ -202,6 +202,29 @@ void sdTanImpl( int n, dslice input, double *output){
 		output[i] = tan(vdSliceAccess(&input, i));
 }
 
+//viTan( n, a, y );
+void viTanhImpl( int n, int *input, double *output){
+	for(int i = 0 ; i < n ; ++i)
+		output[i] = tanh((double)input[i]);
+}
+
+// on sequence
+void siTanhImpl( int n, islice input, double *output){
+	for(int i = 0 ; i < n ; ++i)
+		output[i] = tanh((double) viSliceAccess(&input, i));
+}
+
+//matrix sin alternative to mkl
+void vdTanhImpl( int n, double *input, double *output){
+	for(int i = 0 ; i < n ; ++i)
+		output[i] = tanh(input[i]);
+}
+
+// on sequence
+void sdTanhImpl( int n, dslice input, double *output){
+	for(int i = 0 ; i < n ; ++i)
+		output[i] = tanh(vdSliceAccess(&input, i));
+}
 
 // atan2 implementation
 void viAtan2Impl( int n, int *a, int *b, double *output){

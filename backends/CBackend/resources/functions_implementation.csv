@@ -12,6 +12,7 @@ randi,,randiImpl,
 sin,,!?SinImpl,sin
 cos,,!?CosImpl,cos
 tan,,!?TanImpl,tan
+tanh,,!?TanhImpl,tanh
 ceil,,!?iCeil,ceil
 floor,,!?iFloor,floor
 round,,!?iRound,round

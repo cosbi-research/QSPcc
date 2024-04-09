@@ -186,10 +186,6 @@ public enum CErrorMessage implements ErrorCode {
 	     * Happens if if/while condition is missing or the translation of the condition
 	     * generates an error
 	     */
-	case INTERNAL_MISSING_PARAMETER_CONTEXT:
-	    /**
-	     * Happens when a function_parameter_list node doesn't have the necessary attributes
-	     */
 	case INTERNAL_APPLY_TYPE_UNDEFINED:
 	    /**
 	     * Happens when an apply node doesn't have the necessary attributes
@@ -253,6 +249,17 @@ public enum CErrorMessage implements ErrorCode {
 				Constants.programName,
 				ordinal(),
 				sdk_info
+		);
+	break;
+	case INTERNAL_MISSING_PARAMETER_CONTEXT:
+	    /**
+	     * Happens when a function_parameter_list node doesn't have the necessary attributes
+	     */
+	    ret = String.format(
+				"%s error %s: Undefined function applied to these arguments.\n%s",
+				Constants.programName,
+				ordinal(),
+				"Please define function '"+node.ancestor().code()+"'"
 		);
 	break;
 	case INTERNAL_MISMATCHED_MATRIX_ACCESS:

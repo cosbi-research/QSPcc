@@ -11,4 +11,6 @@ disp(e)
 f = c/d
 disp(f)
 
+g = tanh(6)
+
 disp(toc)
