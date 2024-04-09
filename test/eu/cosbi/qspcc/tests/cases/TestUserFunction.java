@@ -13,6 +13,15 @@ public class TestUserFunction extends TestBase {
     }
 
     @Test
+    public void testUserStructFunction() throws Exception {
+	Path folderpath = Paths.get(basePath, "tests", "fun", "fun_struct");
+	String programName = "main.m";
+
+	translate(programName, folderpath);
+	// compileAndRunC(programName.replace(".m", ""), folderpath);
+    }
+    
+    @Test
     public void testMatrixUserFunction() throws Exception {
 	Path folderpath = Paths.get(basePath, "tests", "fun", "matrix_fun");
 	String programName = "main.m";
