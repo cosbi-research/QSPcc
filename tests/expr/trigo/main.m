@@ -12,5 +12,7 @@ f = c/d
 disp(f)
 
 g = tanh(6)
+h = cosh(6)
+i = sinh(6)
 
 disp(toc)

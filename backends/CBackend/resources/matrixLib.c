@@ -202,30 +202,92 @@ void sdTanImpl( int n, dslice input, double *output){
 		output[i] = tan(vdSliceAccess(&input, i));
 }
 
-//viTan( n, a, y );
+// ==================================
+void viSinhImpl( int n, int *input, double *output){
+        #pragma omp smid
+	for(int i = 0 ; i < n ; ++i)
+		output[i] = sinh((double)input[i]);
+}
+
+// on sequence
+void siSinhImpl( int n, islice input, double *output){
+        #pragma omp smid
+	for(int i = 0 ; i < n ; ++i)
+		output[i] = sinh((double) viSliceAccess(&input, i));
+}
+
+//matrix sin alternative to mkl
+void vdSinhImpl( int n, double *input, double *output){
+        #pragma omp smid
+	for(int i = 0 ; i < n ; ++i)
+		output[i] = sinh(input[i]);
+}
+
+// on sequence
+void sdSinhImpl( int n, dslice input, double *output){
+        #pragma omp smid
+	for(int i = 0 ; i < n ; ++i)
+		output[i] = sinh(vdSliceAccess(&input, i));
+}
+// ===================================
+
+// ==================================
+void viCoshImpl( int n, int *input, double *output){
+        #pragma omp smid
+	for(int i = 0 ; i < n ; ++i)
+		output[i] = cosh((double)input[i]);
+}
+
+// on sequence
+void siCoshImpl( int n, islice input, double *output){
+        #pragma omp smid
+	for(int i = 0 ; i < n ; ++i)
+		output[i] = cosh((double) viSliceAccess(&input, i));
+}
+
+//matrix sin alternative to mkl
+void vdCoshImpl( int n, double *input, double *output){
+        #pragma omp smid
+	for(int i = 0 ; i < n ; ++i)
+		output[i] = cosh(input[i]);
+}
+
+// on sequence
+void sdCoshImpl( int n, dslice input, double *output){
+        #pragma omp smid
+	for(int i = 0 ; i < n ; ++i)
+		output[i] = cosh(vdSliceAccess(&input, i));
+}
+// ===================================
+
+// ==================================
 void viTanhImpl( int n, int *input, double *output){
+        #pragma omp smid
 	for(int i = 0 ; i < n ; ++i)
 		output[i] = tanh((double)input[i]);
 }
 
 // on sequence
 void siTanhImpl( int n, islice input, double *output){
+        #pragma omp smid
 	for(int i = 0 ; i < n ; ++i)
 		output[i] = tanh((double) viSliceAccess(&input, i));
 }
 
 //matrix sin alternative to mkl
 void vdTanhImpl( int n, double *input, double *output){
+        #pragma omp smid
 	for(int i = 0 ; i < n ; ++i)
 		output[i] = tanh(input[i]);
 }
 
 // on sequence
 void sdTanhImpl( int n, dslice input, double *output){
+        #pragma omp smid
 	for(int i = 0 ; i < n ; ++i)
 		output[i] = tanh(vdSliceAccess(&input, i));
 }
-
+// ===================================
 // atan2 implementation
 void viAtan2Impl( int n, int *a, int *b, double *output){
 	for(int i = 0 ; i < n ; ++i)

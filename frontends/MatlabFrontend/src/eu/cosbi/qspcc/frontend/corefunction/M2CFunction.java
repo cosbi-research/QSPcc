@@ -519,6 +519,20 @@ public enum M2CFunction implements IFunction {
 	    M2CUpdaters.updateMathReturnType(false),
 	    // param types
 	    GType.get(BType.UNKNOWN)),
+    SINH(
+    	    "sinh",
+    	    // is an env variable?
+    	    FunctionType.ND,
+    	    // return type
+    	    new Object[] {
+    		    // with a scalar I'll return a scalar
+    		    new Tuple<BType, GType>(BType.SCALAR, GType.get(BType.SCALAR)),
+    		    // with a matrix I'll return a matrix
+    		    new Tuple<BType, GType>(BType.MATRIX,
+    			    GType.get(BType.MATRIX, "sinh_out", GType.get(BType.SCALAR))) },
+    	    M2CUpdaters.updateMathReturnType(false),
+    	    // param types
+    	    GType.get(BType.UNKNOWN)),
 
     ABS(
 	    "abs",
@@ -565,6 +579,20 @@ public enum M2CFunction implements IFunction {
 	    M2CUpdaters.updateMathReturnType(false),
 	    // param types
 	    GType.get(BType.UNKNOWN)),
+    COSH(
+    	    "cosh",
+    	    // is an env variable?
+    	    FunctionType.ND,
+    	    // return type
+    	    new Object[] {
+    		    // with a scalar I'll return a scalar
+    		    new Tuple<BType, GType>(BType.SCALAR, GType.get(BType.SCALAR)),
+    		    // with a matrix I'll return a matrix
+    		    new Tuple<BType, GType>(BType.MATRIX,
+    			    GType.get(BType.MATRIX, "cosh_out", GType.get(BType.SCALAR))) },
+    	    M2CUpdaters.updateMathReturnType(false),
+    	    // param types
+    	    GType.get(BType.UNKNOWN)),
 
     // tan (math)
     TAN(

@@ -7192,6 +7192,8 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		case "sin":
 		case "cos":
 		case "tan":
+		case "sinh":
+		case "cosh":
 		case "tanh":
 		case "atan2":
 		case "abs":

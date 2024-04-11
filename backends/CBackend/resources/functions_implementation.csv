@@ -13,6 +13,8 @@ sin,,!?SinImpl,sin
 cos,,!?CosImpl,cos
 tan,,!?TanImpl,tan
 tanh,,!?TanhImpl,tanh
+sinh,,!?SinhImpl,sinh
+cosh,,!?CoshImpl,cosh
 ceil,,!?iCeil,ceil
 floor,,!?iFloor,floor
 round,,!?iRound,round
