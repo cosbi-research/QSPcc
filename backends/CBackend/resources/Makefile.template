@@ -44,7 +44,7 @@ ifdef lapack_solver
       CFLAGS += -DSUN_LAPACK_DENSE
 endif
 ifdef lapack_band_solver
-      CFLAGS += -DSUN_LAPACK_BAND=${band_solver}
+      CFLAGS += -DSUN_LAPACK_BAND=${lapack_band_solver}
 endif
 ifdef spgmr_solver
       CFLAGS += -DSUN_SPGMR=${spgmr_solver}
