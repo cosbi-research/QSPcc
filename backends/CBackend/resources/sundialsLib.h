@@ -16,6 +16,10 @@
 #include <sundials/sundials_context.h>
 #endif
 
+#if QSPCC_SUNDIALS_VERSION >= 7
+typedef sunrealtype realtype;
+#endif
+
 extern void __wrap_matrix_function(double*(*fn)(double t, double *y, int y_dim1, int y_dim2), realtype t, N_Vector y, N_Vector ydot, void *user_data);
 extern void __wrap_scalar_function(double(*fn)(double t, double *y, int y_dim1, int y_dim2), realtype t, N_Vector y, N_Vector ydot, void *user_data);
 
