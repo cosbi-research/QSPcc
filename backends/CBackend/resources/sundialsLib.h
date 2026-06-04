@@ -12,7 +12,7 @@
 #include <sunlinsol/sunlinsol_pcg.h> /* access to SPTFQMR SUNLinearSolver */
 #endif
 
-#if QSPCC_SUNDIALS_VERSION == 6
+#if QSPCC_SUNDIALS_VERSION >= 6
 #include <sundials/sundials_context.h>
 #endif
 
@@ -104,7 +104,7 @@ typedef struct SUNDIALS_INITIALIZER
     SUNMatrix matrix;
     SUNLinearSolver linearsolver;
 #endif
-#if QSPCC_SUNDIALS_VERSION == 6
+#if QSPCC_SUNDIALS_VERSION >= 6
     SUNContext sunctx;
 #endif
 } SUN_INIT;
