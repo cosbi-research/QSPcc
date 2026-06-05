@@ -204,28 +204,28 @@ void sdTanImpl( int n, dslice input, double *output){
 
 // ==================================
 void viSinhImpl( int n, int *input, double *output){
-        #pragma omp smid
+        #pragma omp simd
 	for(int i = 0 ; i < n ; ++i)
 		output[i] = sinh((double)input[i]);
 }
 
 // on sequence
 void siSinhImpl( int n, islice input, double *output){
-        #pragma omp smid
+        #pragma omp simd
 	for(int i = 0 ; i < n ; ++i)
 		output[i] = sinh((double) viSliceAccess(&input, i));
 }
 
 //matrix sin alternative to mkl
 void vdSinhImpl( int n, double *input, double *output){
-        #pragma omp smid
+        #pragma omp simd
 	for(int i = 0 ; i < n ; ++i)
 		output[i] = sinh(input[i]);
 }
 
 // on sequence
 void sdSinhImpl( int n, dslice input, double *output){
-        #pragma omp smid
+        #pragma omp simd
 	for(int i = 0 ; i < n ; ++i)
 		output[i] = sinh(vdSliceAccess(&input, i));
 }
@@ -233,28 +233,28 @@ void sdSinhImpl( int n, dslice input, double *output){
 
 // ==================================
 void viCoshImpl( int n, int *input, double *output){
-        #pragma omp smid
+        #pragma omp simd
 	for(int i = 0 ; i < n ; ++i)
 		output[i] = cosh((double)input[i]);
 }
 
 // on sequence
 void siCoshImpl( int n, islice input, double *output){
-        #pragma omp smid
+        #pragma omp simd
 	for(int i = 0 ; i < n ; ++i)
 		output[i] = cosh((double) viSliceAccess(&input, i));
 }
 
 //matrix sin alternative to mkl
 void vdCoshImpl( int n, double *input, double *output){
-        #pragma omp smid
+        #pragma omp simd
 	for(int i = 0 ; i < n ; ++i)
 		output[i] = cosh(input[i]);
 }
 
 // on sequence
 void sdCoshImpl( int n, dslice input, double *output){
-        #pragma omp smid
+        #pragma omp simd
 	for(int i = 0 ; i < n ; ++i)
 		output[i] = cosh(vdSliceAccess(&input, i));
 }
@@ -262,28 +262,28 @@ void sdCoshImpl( int n, dslice input, double *output){
 
 // ==================================
 void viTanhImpl( int n, int *input, double *output){
-        #pragma omp smid
+        #pragma omp simd
 	for(int i = 0 ; i < n ; ++i)
 		output[i] = tanh((double)input[i]);
 }
 
 // on sequence
 void siTanhImpl( int n, islice input, double *output){
-        #pragma omp smid
+        #pragma omp simd
 	for(int i = 0 ; i < n ; ++i)
 		output[i] = tanh((double) viSliceAccess(&input, i));
 }
 
 //matrix sin alternative to mkl
 void vdTanhImpl( int n, double *input, double *output){
-        #pragma omp smid
+        #pragma omp simd
 	for(int i = 0 ; i < n ; ++i)
 		output[i] = tanh(input[i]);
 }
 
 // on sequence
 void sdTanhImpl( int n, dslice input, double *output){
-        #pragma omp smid
+        #pragma omp simd
 	for(int i = 0 ; i < n ; ++i)
 		output[i] = tanh(vdSliceAccess(&input, i));
 }
@@ -473,7 +473,7 @@ int viSequenceDimension(int start, int step, int end){
 int *viSequenceVector(int *out_vector, int start, int step, int end){
 	int midx = 0;
 	int out_v_len = viSequenceDimension(start,step,end);
-	#pragma omp smid
+	#pragma omp simd
 	for(int i=start; i<=end ; i += step)
 		out_vector[midx++] = i;
 	return out_vector;
@@ -488,7 +488,7 @@ double *vdLogSequenceVector(double *out_vector, double start, double step, doubl
 	int midx = 0;
 	double expStart=pow(10, start);
 	double expEnd=pow(10, end);
-	#pragma omp smid
+	#pragma omp simd
 	for(double i=expStart; fabs(i - (expEnd + step)) >= SEQUENCE_TOL ; i += step)
 		out_vector[midx++] = pow(10, i);
 	return out_vector;	
@@ -498,7 +498,7 @@ double *vdLogSequenceVector(double *out_vector, double start, double step, doubl
 double *vdSequenceVector(double *out_vector, double start, double step, double end){
 	int midx = 0;
 	double i;
-	#pragma omp smid
+	#pragma omp simd
 	for(i=start; fabs(i - (end + step)) >= SEQUENCE_TOL ; i += step)
 		out_vector[midx++] = i;
 	return out_vector;	
@@ -3161,7 +3161,7 @@ double dInterp(double* xValues, int xValuesLen, double* yValues, int yValuesLen,
 
 void vdInterp(double *yValuesInterp, double* xValues, int xValuesLen, double* yValues, int yValuesLen, double* xsToBeInterpolated, int xsDim){
 	int i = 0;
-	#pragma omp smid
+	#pragma omp simd
 	for(i = 0; i < xsDim ; ++i)
 		yValuesInterp[i] = dInterp(xValues, xValuesLen, yValues, yValuesLen, xsToBeInterpolated[i]);
 }

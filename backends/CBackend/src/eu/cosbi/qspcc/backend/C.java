@@ -1871,7 +1871,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 								if (one_dimensional_as_row) {
 									// interpret as row
 
-									sb.append("#pragma omp smid").append(NL);
+									sb.append("#pragma omp simd").append(NL);
 									sb.append("for(int j=0; j<" + columnDimensions[i] + "; j++)" + NL);
 									sb.append(TAB + vsymbol + STRUCT_ACCESS + "matrix[" + curRowIdx + "*" + ncols
 											+ " + " + curColIdx + " + j] = " + getSequenceAccess(children.get(i), "j")
@@ -1888,7 +1888,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 								} else {
 									// interpret as column
 
-									sb.append("#pragma omp smid").append(NL);
+									sb.append("#pragma omp simd").append(NL);
 									sb.append("for(int j=0; j<" + columnDimensions[i] + "; j++)" + NL);
 									sb.append(TAB + vsymbol + STRUCT_ACCESS + "matrix[(" + curRowIdx + "+j)*" + ncols
 											+ " + " + curColIdx + "] = " + getSequenceAccess(children.get(i), "j") + ";"
@@ -2013,7 +2013,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 										// add N-1 for i0...iN-1
 
 										String dimStringValue = childrenMatrixDimensions.get(w);
-										sb.append("#pragma omp smid").append(NL);
+										sb.append("#pragma omp simd").append(NL);
 										sb.append("for(int i" + k + "=1 ; i" + k + " <= " + dimStringValue + "; ++i" + k
 												+ ")").append(NL);
 										k++;
@@ -2569,7 +2569,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 									dimensions.toArray(new String[dimensions.size()]), false, false, false, null);
 							String dim = String.join("*", dimensions);
 							String ofctype = exprTypeToCType(fptype.of());
-							sb.append("#pragma omp smid").append(NL);
+							sb.append("#pragma omp simd").append(NL);
 							sb.append("for(int " + EXPR_INDEX + "=0; " + EXPR_INDEX + " < " + dim + "; ++" + EXPR_INDEX
 									+ ")").append(NL);
 							sb.append(TAB).append(newParamName).append(".matrix[").append(EXPR_INDEX).append("] = (")
@@ -2595,7 +2595,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 						ensureMatrixMemory(sb, null, newParamName, fptype, dims, false, false, false, null);
 						String dim = String.join("*", dims);
 						String ofctype = exprTypeToCType(fptype.of());
-						sb.append("#pragma omp smid").append(NL);
+						sb.append("#pragma omp simd").append(NL);
 						sb.append(
 								"for(int " + EXPR_INDEX + "=0; " + EXPR_INDEX + " < " + dim + "; ++" + EXPR_INDEX + ")")
 								.append(NL);
@@ -3093,7 +3093,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 						res.append("int ").append(indexMat).append("[").append(dimAsString).append("];").append(NL);
 
 						// populates the matrix in a for cycle
-						res.append("#pragma omp smid").append(NL);
+						res.append("#pragma omp simd").append(NL);
 						res.append("for(int " + EXPR_INDEX + "=0; " + EXPR_INDEX + " < ").append(dimAsString)
 								.append("; ++" + EXPR_INDEX + "){").append(NL);
 						res.append(TAB).append(indexMat).append("[" + EXPR_INDEX + "] = (int)").append(originalMat)
@@ -3496,7 +3496,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 				// res.append("#pragma omp parallel for if(" + String.join(" * ", outDims)
 				// + " > PARALLELIZABLE_FOR_TRESHOLD)").append(NL);
 				/* STARTS FROM 1 FOR COMPATIBILITY WITH ALL THE OTHER CASES */
-				res.append("#pragma omp smid").append(NL);
+				res.append("#pragma omp simd").append(NL);
 				res.append("for(int " + EXPR_INDEX + "=1; " + EXPR_INDEX + " <= " + String.join(" * ", outDims)
 						+ " ; ++" + EXPR_INDEX + ")").append(NL);
 				res.append(TAB).append(outMatrixSymbol).append(STRUCT_ACCESS).append("matrix[").append(EXPR_INDEX)
@@ -3558,7 +3558,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 				// + " > PARALLELIZABLE_FOR_TRESHOLD)").append(NL);
 				/* STARTS FROM 1 FOR COMPATIBILITY WITH ALL THE OTHER CASES */
 				if (onedimmatrix)
-					res.append("#pragma omp smid").append(NL);
+					res.append("#pragma omp simd").append(NL);
 				res.append("for(" + outtype + " " + EXPR_INDEX + " = " + slice.first() + "; " + EXPR_INDEX + " <= "
 						+ slice.third() + " ; " + EXPR_INDEX + " += " + slice.second() + ")").append(NL);
 
@@ -4478,7 +4478,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 				// buf.append("#pragma omp parallel for if(" + totalDimension + " >
 				// PARALLELIZABLE_FOR_TRESHOLD)")
 				// .append(NL);
-				buf.append("#pragma omp smid").append(NL);
+				buf.append("#pragma omp simd").append(NL);
 				buf.append("for(int " + EXPR_INDEX + "=0; " + EXPR_INDEX + " < " + totalDimension + "; ++" + EXPR_INDEX
 						+ ")").append(NL);
 				buf.append(TAB).append(lhs_symbol + STRUCT_ACCESS + "matrix[").append(EXPR_INDEX).append("] = (")
@@ -5120,7 +5120,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 
 		accBuf.append(NL);
 
-		accBuf.append("#pragma omp smid").append(NL);
+		accBuf.append("#pragma omp simd").append(NL);
 		accBuf.append("for(int ").append(ri).append(" = 0; ").append(ri).append(" < ").append(iterNodeDims.get(0))
 				.append("; ++").append(ri).append("){").append(NL);
 		for (String operation : fullOperation.split("\\" + NL))
@@ -5252,7 +5252,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			// iterate over rows
 			accBuf.append("for(int ").append(ri).append(" = 0; ").append(ri).append(" < ").append(iterNodeDims.get(0))
 					.append("; ++").append(ri).append("){").append(NL);
-			accBuf.append("#pragma omp smid").append(NL);
+			accBuf.append("#pragma omp simd").append(NL);
 			if (outSparse && oneSparseMatrix)
 				// iterate over cols, rowIndex is 1-based
 				accBuf.append(TAB).append("for(int ").append(ci).append(" = ").append(rowStart)
@@ -5265,7 +5265,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		} else {
 			String n = String.join(" * ", iterNodeDims);
 			// complete iteration over the only dimension
-			accBuf.append("#pragma omp smid").append(NL);
+			accBuf.append("#pragma omp simd").append(NL);
 			accBuf.append(TAB).append("for(int ").append(ci).append(" = 1, " + c + "=" + ci + " ; ").append(ci)
 					.append(" <= ").append(n).append(" ; ++").append(ci).append(", " + c + "=" + ci + "){").append(NL);
 		}
@@ -5738,7 +5738,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 					sb.append(newSymbol).append(" = 0;").append(NL);
 
 				// simple element-wise product of vectors
-				sb.append("#pragma omp smid").append(NL);
+				sb.append("#pragma omp simd").append(NL);
 				sb.append("for(int " + index + " = 0 ; " + index + " < " + matrixLeftDims[0].valueAsString() + " ; ++"
 						+ index + ")").append(NL);
 				sb.append(TAB).append(newSymbol).append(" += ").append(lexpr).append(op).append(rexpr).append(";")
@@ -6445,7 +6445,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 
 			String colIndex = newMatrix + "_ci";
 			// final for to write back the values in output->matrix
-			ssb.append("#pragma omp smid").append(NL);
+			ssb.append("#pragma omp simd").append(NL);
 			ssb.append("for (int " + colIndex + " = " + newMatrix + STRUCT_ACCESS + "rowIndex[" + SPARSE_ROW_INDEX
 					+ "]-1; " + colIndex + " < " + nz + " ; ++" + colIndex + ") " + newMatrix + STRUCT_ACCESS
 					+ "matrix[" + colIndex + "] = ");
@@ -6482,7 +6482,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			ensureMatrixMemory(sb, outNode, dims.toArray(new String[dims.size()]));
 			String n = String.join(" * ", dims);
 
-			sb.append("#pragma omp smid").append(NL);
+			sb.append("#pragma omp simd").append(NL);
 			sb.append("for (int " + index + " = 0; " + index + " < " + n + "; ++" + index + ")" + NL);
 			sb.append(TAB + newMatrix + STRUCT_ACCESS + "matrix[" + index + "] = " + fullOperation + ";" + NL);
 		} else if (sparseSubExpr) {
@@ -6825,7 +6825,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			// Compute number of matching elements first
 			createVariable(GType.get(BType.INT), howmanyvar, NodeType.ID, "0", false,
 					VarVisibility.LOCAL_TO_BLOCK.context(curApplyNode));
-			sb.append("#pragma omp smid").append(NL);
+			sb.append("#pragma omp simd").append(NL);
 			sb.append("for(int ").append(indexName).append(" = 0; ").append(indexName).append(" < ").append(totalDim);
 			sb.append("; ++").append(indexName).append(")").append(NL);
 			sb.append(TAB);
@@ -6865,7 +6865,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			}
 
 			sbassign.append("if(").append(howmanyvar).append(" > 0){").append(NL);
-			sbassign.append("#pragma omp smid").append(NL);
+			sbassign.append("#pragma omp simd").append(NL);
 			sbassign.append(TAB).append("for(int ").append(indexName);
 			boolean forwardDirection = direction == null || direction.equals("first") || direction.equals("\"first\"");
 			if (forwardDirection) {
@@ -7727,7 +7727,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 					String i = outVarName + "_i";
 					createVariable(inSymbolType.of(), acc, NodeType.ID, "0", false, false,
 							VarVisibility.LOCAL_TO_BLOCK.context(curApplyNode), false);
-					sb.append("#pragma omp smid").append(NL);
+					sb.append("#pragma omp simd").append(NL);
 					sb.append("for(int " + i + "=0; " + i + " < " + realdims[0].valueAsString() + "; ++" + i + ")")
 							.append(NL);
 					sb.append(TAB).append(acc).append(" += ")
@@ -7782,7 +7782,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 				String[] dimsStr = new String[] { row.valueAsString(), row.valueAsString() };
 				// calloc = true! (last parameter)
 				ensureMatrixMemory(sb, outNode, outVarName, outType, dimsStr, false, true, false, null);
-				sb.append("#pragma omp smid").append(NL);
+				sb.append("#pragma omp simd").append(NL);
 				sb.append("for (int " + i + " = 1; " + i + " <= " + min + "; ++" + i + ")").append(NL);
 				sb.append(TAB).append(outVarName + STRUCT_ACCESS + "matrix[matrixAccess(" + outVarName + STRUCT_ACCESS
 						+ "poly_basis, 2, 2, " + min + ", " + min + ", " + i + ", " + i + ")] = ");
@@ -8135,7 +8135,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 							createVariable(GType.get(BType.INT, 1), out, null, "1", false,
 									VarVisibility.LOCAL_TO_BLOCK.context(curApplyNode));
 							String i = "_" + param.name() + "_" + funname + "_i";
-							sb.append("#pragma omp smid").append(NL);
+							sb.append("#pragma omp simd").append(NL);
 							sb.append("for(int " + i + " = 0; " + i + " < ")
 									.append(String.join(" * ", matrixParamDimsStr)).append("; ++").append(i).append(")")
 									.append(NL);
@@ -8295,7 +8295,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 								.append("));").append(NL);
 					} else {
 						// with just a cycle initializes the matrix elements
-						sb.append("#pragma omp smid").append(NL);
+						sb.append("#pragma omp simd").append(NL);
 						sb.append("for(int i=0; i<").append(totalDimensionString).append("; i++){").append(NL);
 						sb.append(TAB).append(outMatrixName + STRUCT_ACCESS + "matrix").append("[i] = ").append(num)
 								.append(";").append(NL);
@@ -8462,7 +8462,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 				List<String> dims = nodeDimsToStr(outNode, ((DimensionType) outType).dims(), true, false);
 				// allocate space for outSym
 				ensureMatrixMemory(sb, outNode, outputSym, ((DimensionType) ptype).dims());
-				sb.append("#pragma omp smid").append(NL);
+				sb.append("#pragma omp simd").append(NL);
 				sb.append("for(int " + i + " = 0 ; " + i + " < " + String.join(" * ", dims) + "; ++" + i + ")")
 						.append(NL);
 				sb.append(TAB).append(outputSym).append(STRUCT_ACCESS).append("matrix[" + i + "] = ").append("sqrt(")
@@ -9441,7 +9441,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 						for (int i = 0; i < idim; ++i)
 							bufferStmt.append(outMatrix).append("[" + i + "] = 0;").append(NL);
 					} else {
-						bufferStmt.append("#pragma omp smid").append(NL);
+						bufferStmt.append("#pragma omp simd").append(NL);
 						bufferStmt.append("for(int i = 0; i < " + String.join("*", dimensionsAsString) + " ; ++i)")
 								.append(NL);
 						bufferStmt.append(TAB).append(outMatrix).append("[i] = 0;").append(NL);
@@ -9508,7 +9508,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 						for (int i = 0; i < idim; ++i)
 							bufferStmt.append(outMatrix).append("[" + i + "] = 0;").append(NL);
 					} else {
-						bufferStmt.append("#pragma omp smid").append(NL);
+						bufferStmt.append("#pragma omp simd").append(NL);
 						bufferStmt.append("for(int i = 0; i < " + String.join("*", dimensionsAsString) + " ; ++i)")
 								.append(NL);
 						bufferStmt.append(TAB).append(outMatrix).append("[i] = 0;").append(NL);
@@ -10839,7 +10839,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			// sum of squares of s
 			bufferToWriteOn.append(indentTabs()).append(ofTypeAsCString).append(" sss = 0;").append(NL);
 			
-			bufferToWriteOn.append(indentTabs()).append("#pragma omp smid").append(NL);
+			bufferToWriteOn.append(indentTabs()).append("#pragma omp simd").append(NL);
 			bufferToWriteOn.append(indentTabs())
 					.append("for(int i=0; i < " + String.join(" * ", dims) + " ; ++i)").append(NL)
 					.append(indentTabs()).append(TAB).append("sss += ").append(functionName).append("(s").append(STRUCT_ACCESS).append("matrix[i], 2);").append(NL);
@@ -11507,7 +11507,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		tabs += TAB;
 
 		// LOOK FOR J-TH ELEMENT OF xsToBeInterpolated AMONG ALL I-TH values in xValues
-		sb.append("#pragma omp smid").append(NL);
+		sb.append("#pragma omp simd").append(NL);
 		sb.append(tabs)
 				.append("for(int i" + curDim + "=0; i" + curDim + " < yValues.dim" + curDim + " ; ++i" + curDim + "){")
 				.append(NL);
@@ -14070,7 +14070,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			ensureMatrixMemory(localBf, outputNode, strDims.toArray(new String[strDims.size()]));
 
 			// for loop for initialization..
-			localBf.append("#pragma omp smid").append(NL);
+			localBf.append("#pragma omp simd").append(NL);
 			localBf.append("for( int ").append(i).append("=0 ; ").append(i).append(" < ")
 					.append(String.join(" * ", strDims)).append(" ; ").append("++").append(i).append("){").append(NL);
 
@@ -14126,7 +14126,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 
 			// for loop for initialization..
 
-			current.append("#pragma omp smid").append(NL);
+			current.append("#pragma omp simd").append(NL);
 			current.append("for( int " + i + "=0; " + i + " < ").append(String.join(" * ", strDims)).append(" ; ")
 					.append("++" + i + "){").append(NL);
 			current.append(TAB).append(oexpr).append(" = ")
@@ -14180,7 +14180,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 
 			// for loop for initialization..
 
-			current.append("#pragma omp smid").append(NL);
+			current.append("#pragma omp simd").append(NL);
 			current.append("for( int " + i + "=0; " + i + " < ").append(String.join(" * ", strDims)).append(" ; ")
 					.append("++" + i + "){").append(NL);
 			current.append(TAB).append(oexpr).append(" = ");
@@ -14434,7 +14434,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			node.symbol(conditionVariable);
 			createVariable(GType.get(BType.BOOL), conditionVariable, NodeType.ID, "1", false, false,
 					VarVisibility.LOCAL_TO_BLOCK.context(node), sb, false);
-			sb.append("#pragma omp smid").append(NL);
+			sb.append("#pragma omp simd").append(NL);
 			sb.append("for(int " + EXPR_INDEX + "= 0; " + EXPR_INDEX + " < " + String.join("*", dims) + " && "
 					+ conditionVariable + " ; ++" + EXPR_INDEX + " )").append(NL);
 			if (type instanceof MatrixType) {

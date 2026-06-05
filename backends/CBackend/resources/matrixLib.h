@@ -116,10 +116,10 @@ extern void sdiRound(int n, dslice input, int *output);
 #define MIN3(a,b,c) MIN2(MIN2(a,b),c)
 #define MIN4(a,b,c) MIN2(MIN3(a,b,c),d)
 
-#define GET_MACRO(_1,_2,_3,_4,NAME,...) NAME
+#define QSPCC_GET_MACRO(_1,_2,_3,_4,NAME,...) NAME
 // this will be used by the program
-#define qspcc_max(...) GET_MACRO(__VA_ARGS__, MAX4, MAX3, MAX2)(__VA_ARGS__)
-#define qspcc_min(...) GET_MACRO(__VA_ARGS__, MIN4, MIN3, MIN2)(__VA_ARGS__)
+#define qspcc_max(...) QSPCC_GET_MACRO(__VA_ARGS__, MAX4, MAX3, MAX2)(__VA_ARGS__)
+#define qspcc_min(...) QSPCC_GET_MACRO(__VA_ARGS__, MIN4, MIN3, MIN2)(__VA_ARGS__)
 
 // sign function implementation for scalar
 #define sign(__x) ((__x > 0) - (__x < 0))
