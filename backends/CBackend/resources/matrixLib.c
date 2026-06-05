@@ -464,7 +464,7 @@ void dmIsNan(int *out, double *toBeTested, int dimensions, ...){
 }
 
 int viSequenceDimension(int start, int step, int end){
-	return max(1, (end-start)/step + 1);
+	return qspcc_max(1, (end-start)/step + 1);
 }
 
 //initialize out_v with the given sequence
@@ -480,7 +480,7 @@ int *viSequenceVector(int *out_vector, int start, int step, int end){
 }
 
 int vdSequenceDimension(double start, double step, double end){
-	return (int) max(1.0, (end-start)/step + 1.0);
+	return (int) qspcc_max(1.0, (end-start)/step + 1.0);
 }
 
 // equivalent to MATLAB logspace, compute the full vector given a slice in a logspace

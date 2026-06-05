@@ -2799,7 +2799,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 				// 1xN vectors sometimes are passed in as Nx1 matrices.
 				// to be sure not to get the wrong dimension, make a max of both
 				sdims.clear();
-				sdims.add("max(" + String.join(", ", tdims) + ")");
+				sdims.add("qspcc_max(" + String.join(", ", tdims) + ")");
 			}
 		}
 
@@ -7807,7 +7807,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 					String min = outVarName + "_len";
 					String i = outVarName + "_i";
 					createVariable(GType.get(BType.INT), min, NodeType.ID,
-							"min(" + row.valueAsString() + ", " + col.valueAsString() + ")", false, false,
+							"qspcc_min(" + row.valueAsString() + ", " + col.valueAsString() + ")", false, false,
 							VarVisibility.LOCAL_TO_BLOCK.context(curApplyNode), false);
 					// result is rowx1
 					String[] dimsStr = new String[] { row.valueAsString(), "1" };
@@ -8424,9 +8424,9 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 						for (int i = 0; i < dims.length - 1; ++i) {
 							IntType dim = dims[i];
 							if (i < dims.length - 2)
-								sb.append("max(").append(symbolicValue(param, i)).append(", ");
+								sb.append("qspcc_max(").append(symbolicValue(param, i)).append(", ");
 							else
-								sb.append("max(").append(symbolicValue(param, i)).append(", ")
+								sb.append("qspcc_max(").append(symbolicValue(param, i)).append(", ")
 										.append(symbolicValue(param, i + 1)).append(")");
 						}
 						for (int i = 0; i < dims.length - 2; ++i)
@@ -9763,7 +9763,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			String structUserDataPointer = "&" + structUserDataName;
 			bufferStmt.append("cmaes_optimize(").append(optimoptionSymbol).append(", ")
 												.append(outVarName+STRUCT_ACCESS+"matrix").append(", ")
-			                                    .append("min("+lbDim+", "+ubDim+")").append(", ")
+			                                    .append("qspcc_min("+lbDim+", "+ubDim+")").append(", ")
 			                                    .append(lbSymbol+STRUCT_ACCESS+"matrix").append(", ")
 			                                    .append(ubSymbol+STRUCT_ACCESS+"matrix").append(", ")
 			                                    .append(wrappedFunctionName).append(", ")
@@ -10001,7 +10001,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 				if (tspanDimsAsStrings.size() == 1) {
 					bufferStmt.append(tspanDimsAsStrings.get(0));
 				} else if (tspanDimsAsStrings.size() == 2) {
-					bufferStmt.append("max(").append(tspanDimsAsStrings.get(0)).append(", ")
+					bufferStmt.append("qspcc_max(").append(tspanDimsAsStrings.get(0)).append(", ")
 							.append(tspanDimsAsStrings.get(1)).append(")");
 				} else
 					throw new TypeException(CErrorMessage.INTERNAL_SLICE_WITH_MORE_THAN_2_DIMENSIONS, tSpanNode,

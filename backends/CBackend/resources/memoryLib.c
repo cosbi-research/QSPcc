@@ -424,7 +424,7 @@ void sparse_memcpy_inplace(void *matrix, int *newdims, int *olddims, int ndims, 
 	// dim1 = number of rows, dim2 = number of cols
 	// work first on number of cols because we are rowmajor
 	if(newdims[1] > olddims[1]){
-		totalDim = min(totalOldDimension, totalNewDimension);
+		totalDim = qspcc_min(totalOldDimension, totalNewDimension);
 		howManyZeros = newdims[1] - olddims[1];
 		startEvery = olddims[1];
 		// every 'startEvery' copy from oldmatrix and leave room for 'howManyZeros'
@@ -439,11 +439,11 @@ void sparse_memcpy_inplace(void *matrix, int *newdims, int *olddims, int ndims, 
 			totalOldDimension = totalOldDimension/olddims[1] * newdims[1];
 	}
 	
-	curdim = max( newdims[1], olddims[1]);
+	curdim = qspcc_max( newdims[1], olddims[1]);
 	dimsProduct = curdim;
 
 	if( newdims[0] > olddims[0] ){
-		totalDim = min(totalOldDimension, totalNewDimension);
+		totalDim = qspcc_min(totalOldDimension, totalNewDimension);
 		howManyZeros = curdim*(newdims[0]-olddims[0]);
 		// use newdims[1] in place of olddims[1] because maybe also dims[1] changed		
 		startEvery = (curdim-1) + (olddims[0]-1)*curdim + 1;
@@ -458,7 +458,7 @@ void sparse_memcpy_inplace(void *matrix, int *newdims, int *olddims, int ndims, 
 		if(olddims[0]!=0)
 			totalOldDimension = totalOldDimension/olddims[0] * newdims[0];
 	}
-	curdim =  max( newdims[0], olddims[0]);
+	curdim =  qspcc_max( newdims[0], olddims[0]);
 	dimsProduct *= curdim;
 	#else
 	// directly work in order
@@ -467,12 +467,12 @@ void sparse_memcpy_inplace(void *matrix, int *newdims, int *olddims, int ndims, 
 
 	for(int d = dstart ; d < ndims ; ++d){
 		if(newdims[d] > olddims[d]){
-			totalDim = min(totalOldDimension, totalNewDimension);
+			totalDim = qspcc_min(totalOldDimension, totalNewDimension);
 			howManyZeros = dimsProduct * (newdims[d] - olddims[d]);
 			startEvery = 0;
 			dimsUntilNow = 1;
 			for( int j = 0 ; j < d ; ++j ){
-				curdim = max(olddims[j], newdims[j]);
+				curdim = qspcc_max(olddims[j], newdims[j]);
 				startEvery += (curdim-1)*dimsUntilNow;
 				dimsUntilNow *= curdim;
 			}
@@ -496,7 +496,7 @@ void sparse_memcpy_inplace(void *matrix, int *newdims, int *olddims, int ndims, 
 			// done = 1;			
 			// break;
 		}
-		curdim =  max( newdims[d], olddims[d]);
+		curdim =  qspcc_max( newdims[d], olddims[d]);
 		dimsProduct *= curdim;				
 	}
 }
@@ -555,7 +555,7 @@ void sparse_memcpy(void *newmatrix, void *oldmatrix, int *newdims, int *olddims,
 
 	// use the greater between old cols (olddims[1]) and new cols (newdims[1])
 	// because otherwise howManyZeros and startEvery won't have the correct value and won't behave like matlab
-	curdim = max( newdims[1], olddims[1]);
+	curdim = qspcc_max( newdims[1], olddims[1]);
 	dimsProduct = curdim;
 
 	if( newdims[0] > olddims[0] ){
@@ -571,7 +571,7 @@ void sparse_memcpy(void *newmatrix, void *oldmatrix, int *newdims, int *olddims,
 		if(olddims[0]!=0)
 			totalOldDimension = totalOldDimension/olddims[0] * newdims[0];
 	}
-	curdim =  max( newdims[0], olddims[0]);
+	curdim =  qspcc_max( newdims[0], olddims[0]);
 	dimsProduct *= curdim;
 	#else
 	// directly work in order
@@ -584,7 +584,7 @@ void sparse_memcpy(void *newmatrix, void *oldmatrix, int *newdims, int *olddims,
 			startEvery = 0;
 			dimsUntilNow = 1;
 			for( int j = 0 ; j < d ; ++j ){
-				curdim = max(olddims[j], newdims[j]);
+				curdim = qspcc_max(olddims[j], newdims[j]);
 				startEvery += (curdim-1)*dimsUntilNow;
 				dimsUntilNow *= curdim;
 			}
@@ -607,7 +607,7 @@ void sparse_memcpy(void *newmatrix, void *oldmatrix, int *newdims, int *olddims,
 			// done = 1;			
 			// break;
 		}
-		curdim =  max( newdims[d], olddims[d]);
+		curdim =  qspcc_max( newdims[d], olddims[d]);
 		dimsProduct *= curdim;		
 	}
 	
@@ -657,7 +657,7 @@ void v##dtype##InternalEnsureSparseCapacity(int ndims, int dimToAllocate, void* 
     if(totalDimension > 0){                                                                                       \
 	    if(mat->matrix==NULL){                                                                                \
 		if(dimToAllocate < 0)                                                                             \
-			dimToAllocate = min((int)(totalDimension*0.1), MAX_SPARSE_INITIAL_DIMENSION);             \
+			dimToAllocate = qspcc_min((int)(totalDimension*0.1), MAX_SPARSE_INITIAL_DIMENSION);             \
 		/* by default allocate 10% of total dimension */                                                  \
 		int cells = (dimToAllocate + EXTRA_SAFETY_MEMORY);                                                \
 		mat->matrix= (type  *)  qspcc_malloc(cells * sizeof(type));                                       \
@@ -678,7 +678,7 @@ void v##dtype##InternalEnsureSparseCapacity(int ndims, int dimToAllocate, void* 
 		}                                                                                                 \
 		int newDimension = update_matrix_mul(toBeModified, ndims);                                        \
 		if(dimToAllocate < 0)                                                                             \
-			dimToAllocate = min((int)(newDimension*0.1), MAX_SPARSE_INITIAL_DIMENSION);               \
+			dimToAllocate = qspcc_min((int)(newDimension*0.1), MAX_SPARSE_INITIAL_DIMENSION);               \
                                                                                                                   \
 		/* this is a check in a loop, so if newdim>realdims we really need to enlarge the arrays */       \
 		if(dimToAllocate > existingDimension){                                                            \
