@@ -488,7 +488,6 @@ double *vdLogSequenceVector(double *out_vector, double start, double step, doubl
 	int midx = 0;
 	double expStart=pow(10, start);
 	double expEnd=pow(10, end);
-	#pragma omp simd
 	for(double i=expStart; fabs(i - (expEnd + step)) >= SEQUENCE_TOL ; i += step)
 		out_vector[midx++] = pow(10, i);
 	return out_vector;	
@@ -498,7 +497,6 @@ double *vdLogSequenceVector(double *out_vector, double start, double step, doubl
 double *vdSequenceVector(double *out_vector, double start, double step, double end){
 	int midx = 0;
 	double i;
-	#pragma omp simd
 	for(i=start; fabs(i - (end + step)) >= SEQUENCE_TOL ; i += step)
 		out_vector[midx++] = i;
 	return out_vector;	
@@ -688,13 +686,13 @@ int v##tchar##Sort(type *input, const char *direction, int ndims, int nargs, ...
 				else                                                                              \
 					QSORT(_sort_##tchar, _desc_##tchar##_comparator) (elems, cols);           \
                                                                                                                   \
-				for(int or = 0 ; or < rows ; ++or)                                                \
+				for(int ior = 0 ; ior < rows ; ++ior)                                                \
 					/* fill column in output result */                                        \
 					switch(noutputs){                                                         \
 					case 2:                                                                   \
-						outputs[0][otherDim*otherPlaneDim*cols + or*cols + c] = elems[or].pos;  \
+						outputs[0][otherDim*otherPlaneDim*cols + ior*cols + c] = elems[ior].pos;  \
 					case 1:                                                                   \
-						result[otherDim*otherPlaneDim*cols + or*cols + c] = elems[or].value;     \
+						result[otherDim*otherPlaneDim*cols + ior*cols + c] = elems[ior].value;     \
 					break;                                                                    \
 					default:                                                                  \
 						assert(false && "Unsupported number of output arguments for v?Sort"); \
@@ -2166,20 +2164,26 @@ void printMatrix(void *m, int *poly_basis, size_t size, void (*print)(FILE *, ch
 
 void dTransposeMatrix(void *dest, void *src, int src_h, int src_w)
 {
-	int i, j;
-	double (*d)[src_h] = dest, (*s)[src_w] = src;
-	for (i = 0; i < src_h; i++)
-		for (j = 0; j < src_w; j++)
-			d[j][i] = s[i][j];
+    int i, j;
+
+    double *d = (double *) dest;
+    double *s = (double *) src;
+
+    #pragma omp parallel for private(i,j) collapse(2)
+    for (i = 0; i < src_h; i++)
+        for (j = 0; j < src_w; j++)
+            d[j * src_h + i] = s[i * src_w + j];
 }
 
 void iTransposeMatrix(void *dest, void *src, int src_h, int src_w)
 {
 	int i, j;
-	int (*d)[src_h] = dest, (*s)[src_w] = src;
+    int *d = (int *) dest;
+    int *s = (int *) src;
+	#pragma omp parallel for private(i,j) collapse(2)
 	for (i = 0; i < src_h; i++)
 		for (j = 0; j < src_w; j++)
-			d[j][i] = s[i][j];
+			d[j * src_h + i] = s[i * src_w + j];
 }
 
 void dTransposeMatrixInplace(double *m, int h, int w){

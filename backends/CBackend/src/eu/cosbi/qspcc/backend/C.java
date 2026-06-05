@@ -6825,7 +6825,8 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			// Compute number of matching elements first
 			createVariable(GType.get(BType.INT), howmanyvar, NodeType.ID, "0", false,
 					VarVisibility.LOCAL_TO_BLOCK.context(curApplyNode));
-			sb.append("#pragma omp simd").append(NL);
+			//can't add simd on a loop with a break
+			//sb.append("#pragma omp simd").append(NL);
 			sb.append("for(int ").append(indexName).append(" = 0; ").append(indexName).append(" < ").append(totalDim);
 			sb.append("; ++").append(indexName).append(")").append(NL);
 			sb.append(TAB);
@@ -6865,7 +6866,8 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			}
 
 			sbassign.append("if(").append(howmanyvar).append(" > 0){").append(NL);
-			sbassign.append("#pragma omp simd").append(NL);
+			//can't add simd on a loop involving a condition different from indexName
+			//sbassign.append(TAB).append("#pragma omp simd").append(NL);
 			sbassign.append(TAB).append("for(int ").append(indexName);
 			boolean forwardDirection = direction == null || direction.equals("first") || direction.equals("\"first\"");
 			if (forwardDirection) {
@@ -8869,7 +8871,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 
 			if (functionName.toLowerCase().equals("max")) {
 				// in case inputs are scalar
-				scalarfun = "max";
+				scalarfun = "qspcc_max";
 				// in case inputs are two matrices
 				pointwiseMatrixFun = "*Max";
 				// in case input is a single matrix (max by columns)
@@ -8881,7 +8883,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 				scalarMatrixFun = "*ScalarMatrixMax";
 				statisticalFunction = true;
 			} else if (functionName.toLowerCase().equals("min")) {
-				scalarfun = "min";
+				scalarfun = "qspcc_min";
 				pointwiseMatrixFun = "*Min";
 				// in case input is a single matrix (max by columns)
 				matrixFun = "*Col?Min";
@@ -11507,7 +11509,8 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		tabs += TAB;
 
 		// LOOK FOR J-TH ELEMENT OF xsToBeInterpolated AMONG ALL I-TH values in xValues
-		sb.append("#pragma omp simd").append(NL);
+		// cannot because there is a break
+		//sb.append("#pragma omp simd").append(NL);
 		sb.append(tabs)
 				.append("for(int i" + curDim + "=0; i" + curDim + " < yValues.dim" + curDim + " ; ++i" + curDim + "){")
 				.append(NL);
@@ -14434,7 +14437,8 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			node.symbol(conditionVariable);
 			createVariable(GType.get(BType.BOOL), conditionVariable, NodeType.ID, "1", false, false,
 					VarVisibility.LOCAL_TO_BLOCK.context(node), sb, false);
-			sb.append("#pragma omp simd").append(NL);
+			// cannot openmp a loop involving a variable different from EXPR_INDEX
+			//sb.append("#pragma omp simd").append(NL);
 			sb.append("for(int " + EXPR_INDEX + "= 0; " + EXPR_INDEX + " < " + String.join("*", dims) + " && "
 					+ conditionVariable + " ; ++" + EXPR_INDEX + " )").append(NL);
 			if (type instanceof MatrixType) {

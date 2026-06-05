@@ -122,7 +122,7 @@ double2dMatrix *vdCsvLoad(const char* file, int fline, const char* funname, cons
 	va_list vl;
 	va_start(vl, n_args);
 	
-	double2dMatrix *ret = malloc(sizeof(double2dMatrix));
+	double2dMatrix *ret = (double2dMatrix *) malloc(sizeof(double2dMatrix));
 	ret->matrix=NULL;
 	ret->dim1=0;
 	ret->dim2=0;

@@ -23,7 +23,7 @@
 #if defined(SUN_MKL_DENSE)
 #include <sycl/sycl.hpp>
 #include <sundials/sundials_memory.h>
-#include <sundials/sundials_memory_sycl.h>
+#include <sunmemory/sunmemory_sycl.h>
 #include <sunmatrix/sunmatrix_onemkldense.h>
 #include <sunlinsol/sunlinsol_onemkldense.h>
 #include <float.h>
@@ -114,7 +114,7 @@ void __wrap_scalar_function(double(*fn)(double t, double *y, int y_dim1, int y_d
 *            NULL pointer
 */
 
-int check_flag(void *flagvalue, char *funcname, int opt)
+int check_flag(void *flagvalue, const char *funcname, int opt)
 {
     int *errflag;
 
@@ -269,8 +269,8 @@ SUN_INIT *sun_init_d(SUN_INIT *s, int (*f)(realtype t, N_Vector y, N_Vector ydot
 	       SUNContext_Create(0, &s->sunctx);
 #ifdef SUN_MKL_DENSE
           s->qspccQueue = new sycl::queue(sycl::default_selector_v);
-          s->flag = SUNMemoryHelper_Sycl(&s->memhelper);
-          if (check_flag(&s->flag, "SUNMemoryHelper_Sycl", 1)) return s;
+          s->memhelper = SUNMemoryHelper_Sycl(s->sunctx);
+          if (check_flag((void *) s->memhelper, "SUNMemoryHelper_Sycl", 0)) return s;
           // remember function being called
           qspcc_cvode_rhs_fn = f;
 #endif
@@ -351,7 +351,20 @@ SUN_INIT *sun_init_d(SUN_INIT *s, int (*f)(realtype t, N_Vector y, N_Vector ydot
     s->flag = CVodeSetLinearSolver(s->cvode_mem, LS, A);
     if(check_flag(&s->flag, "CVodeSetLinearSolver", 1)) return s;
 #elif defined(SUN_MKL_DENSE)
+	#ifdef DEBUG
+    fprintf(stderr, "SYCL device: %s\n",
+            s->qspccQueue->get_device()
+                .get_info<sycl::info::device::name>()
+                .c_str());
+    fprintf(stderr, "SYCL backend queue created\n");
+    
+    size_t jac_bytes = (size_t)y_len * (size_t)y_len * sizeof(realtype);
+    fprintf(stderr, "SUNMatrix_OneMklDense size: %ld x %ld\n",
+        (long)y_len, (long)y_len);
 
+    fprintf(stderr, "Dense matrix bytes: %.3f MiB\n",
+        (double)jac_bytes / (1024.0 * 1024.0));
+    #endif
     A = SUNMatrix_OneMklDense(
             y_len,
             y_len,
@@ -843,7 +856,7 @@ void print_stats(void *cvode_mem)
     flag = CVodeGetNumGEvals(cvode_mem, &nge);
     check_flag(&flag, "CVodeGetNumGEvals", ONE);
 
-    fprintf(stderr, "Final Statistics:"NEW_LINE);
+    fprintf(stderr, "Final Statistics:" NEW_LINE);
     fprintf(stderr,
         "nst = %-6ld nfe = %-6ld nsetups = %-6ld nfeLS = %-6ld nje = %ld",
         nst, nfe, nsetups, nfeLS, nje

@@ -8,7 +8,9 @@
 #define __HEADERS__
 #define ADD_BYTES(base_addr, num_bytes) (((char *)(base_addr)) + (num_bytes))
 #define SUBTRACT_BYTES(base_addr, num_bytes) (((char *)(base_addr)) - (num_bytes))
+#ifndef __cplusplus
 typedef int bool;
+#endif
 #define true 1
 #define false 0
 // it was 37500000
@@ -613,7 +615,7 @@ void sparse_memcpy(void *newmatrix, void *oldmatrix, int *newdims, int *olddims,
 	
 }
 
-inline void computePolyBasis(int *poly_basis, int *dims, int ndims){
+void computePolyBasis(int *poly_basis, int *dims, int ndims){
 	if(ndims == 1)
 		poly_basis[0] = 1;
 	else if(ndims == 2 && (dims[0] == 1 || dims[1] == 1)){
