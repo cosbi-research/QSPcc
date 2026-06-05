@@ -2013,7 +2013,8 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 										// add N-1 for i0...iN-1
 
 										String dimStringValue = childrenMatrixDimensions.get(w);
-										sb.append("#pragma omp simd").append(NL);
+										// avoid nested simd
+										//sb.append("#pragma omp simd").append(NL);
 										sb.append("for(int i" + k + "=1 ; i" + k + " <= " + dimStringValue + "; ++i" + k
 												+ ")").append(NL);
 										k++;
