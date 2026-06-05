@@ -242,7 +242,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 	// C-backend specific options
 	protected String programName = null;
 	protected String sundialsVersion = null;
-	protected List<String> supportedSundialsVersions = Arrays.asList("6", "5", "2", "3", "4");
+	protected List<String> supportedSundialsVersions = Arrays.asList("7", "6", "5", "2", "3", "4");
 	protected Path sunincludepath = null;
 	protected Path sunlibpath = null;
 	protected Path stdlibpath = null;
@@ -13706,6 +13706,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			throws IOException {
 		String makefile = IOUtils.toString(fStream, "UTF-8");
 		makefile = makefile.replace("<SUN_INCLUDE_PATH>", sunincludepath.toString());
+		makefile = makefile.replace("<SUN_VERSION>", sundialsVersion);
 		makefile = makefile.replace("<SUN_LIB_PATH>", sunlibpath.toString());
 		makefile = makefile.replace("<STD_LIB_PATH>", stdlibpath.toString());
 		makefile = makefile.replace("<TCMALLOC_LIB_PATH>", tcmallocpath.toString());
@@ -13729,6 +13730,7 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 	protected String getMakefile(InputStream fStream, String programName, List<String> fun_names) throws IOException {
 		String makefile = IOUtils.toString(fStream, "UTF-8");
 		makefile = makefile.replace("<SUN_INCLUDE_PATH>", sunincludepath.toString());
+		makefile = makefile.replace("<SUN_VERSION>", sundialsVersion);
 		makefile = makefile.replace("<SUN_LIB_PATH>", sunlibpath.toString());
 		makefile = makefile.replace("<STD_LIB_PATH>", stdlibpath.toString());
 		makefile = makefile.replace("<TCMALLOC_LIB_PATH>", tcmallocpath.toString());

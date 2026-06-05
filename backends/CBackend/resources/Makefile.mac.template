@@ -2,6 +2,7 @@ SHELL = sh
 
 includedir        = /usr/include
 sunincludedir   = <SUN_INCLUDE_PATH>
+sunversion      =   <SUN_VERSION>
 libdir            = <STD_LIB_PATH>
 sunlibdir       = <SUN_LIB_PATH>
 tcmallocdir       = <TCMALLOC_LIB_PATH>
@@ -81,6 +82,12 @@ endif
 ifdef lapack_band_solver
     LDFLAGS += ${sunlibdir}/libsundials_sunlinsollapackband.a
     LIBS += -llapack
+endif
+
+ifneq ($(strip $(sunversion)),)
+ifeq ($(shell [ $(sunversion) -ge 7 ] && echo yes),yes)
+    LIBS += ${sunlibdir}/libsundials_core.a
+endif
 endif
 
 LINKFLAGS = -headerpad_max_install_names -Wl,-rpath,${sunlibdir} 
