@@ -20,6 +20,15 @@
 #include <sunlinsol/sunlinsol_lapackband.h> /* access to dense LAPACK solver */
 #endif
 
+#if defined(SUN_MKL_DENSE)
+#include <sycl/sycl.hpp>
+#include <sundials/sundials_memory.h>
+#include <sundials/sundials_memory_sycl.h>
+#include <sunmatrix/sunmatrix_onemkldense.h>
+#include <sunlinsol/sunlinsol_onemkldense.h>
+#include <float.h>
+#endif
+
 #include <cvode/cvode_bandpre.h>
 #include <cvode/cvode_ls.h>
 #include <cvode/cvode_diag.h>             /* access to CVDIAG linear solver           */
@@ -38,6 +47,15 @@
 
 //static variable
 static INTEGRATION_OPTS global_opts;
+
+#ifdef SUN_MKL_DENSE
+static int (*qspcc_cvode_rhs_fn)(
+    realtype t,
+    N_Vector y,
+    N_Vector ydot,
+    void *user_data
+) = NULL;
+#endif
 
 /* wraps the matrix function that defines the ODE in a sundial-compatible way */
 void __wrap_matrix_function(double*(*fn)(double t, double *y, int y_dim1, int y_dim2), realtype t, N_Vector y, N_Vector ydot, void *user_data){
@@ -137,6 +155,67 @@ int check_flag(void *flagvalue, char *funcname, int opt)
     return ZERO;
 }
 
+#ifdef SUN_MKL_DENSE
+static int qspcc_onemkl_dq_jac(
+    realtype t,
+    N_Vector y,
+    N_Vector fy,
+    SUNMatrix Jac,
+    void *user_data,
+    N_Vector tmp1,
+    N_Vector tmp2,
+    N_Vector tmp3
+) {
+    if (qspcc_cvode_rhs_fn == NULL) {
+        fprintf(stderr, "SUN_ONEMKL error: RHS callback is NULL\n");
+        return -1;
+    }
+
+    sunindextype n = NV_LENGTH_S(y);
+
+    realtype *y_data    = NV_DATA_S(y);
+    realtype *fy_data   = NV_DATA_S(fy);
+    realtype *ytmp_data = NV_DATA_S(tmp1);
+    realtype *ftmp_data = NV_DATA_S(tmp2);
+
+    memcpy(ytmp_data, y_data, (size_t)n * sizeof(realtype));
+
+    realtype *host_jac = (realtype *) malloc((size_t)n * (size_t)n * sizeof(realtype));
+    if (host_jac == NULL) {
+        fprintf(stderr, "SUN_ONEMKL error: host Jacobian allocation failed\n");
+        return -1;
+    }
+
+    const realtype sqrteps = SUNRsqrt((realtype) DBL_EPSILON);
+
+    for (sunindextype j = 0; j < n; ++j) {
+        realtype yj = y_data[j];
+        realtype inc = sqrteps * SUNMAX(SUNRabs(yj), ONE);
+        if (inc == ZERO) inc = sqrteps;
+
+        ytmp_data[j] = yj + inc;
+
+        int retval = qspcc_cvode_rhs_fn(t, tmp1, tmp2, user_data);
+        if (retval != 0) {
+            ytmp_data[j] = yj;
+            free(host_jac);
+            return retval;
+        }
+
+        for (sunindextype i = 0; i < n; ++i) {
+            host_jac[(size_t)j * (size_t)n + (size_t)i] =
+                (ftmp_data[i] - fy_data[i]) / inc;
+        }
+
+        ytmp_data[j] = yj;
+    }
+
+    int retval = SUNMatrix_OneMklDense_CopyToDevice(Jac, host_jac);
+
+    free(host_jac);
+    return retval;
+}
+#endif
 
 /*
 * just to make the method sun_init work with y as a int* instead of double*
@@ -188,6 +267,13 @@ SUN_INIT *sun_init_d(SUN_INIT *s, int (*f)(realtype t, N_Vector y, N_Vector ydot
            /* Call CVodeCreate to create the solver memory and specify the
             * Backward Differentiation Formula and the use of a Newton iteration */
 	       SUNContext_Create(0, &s->sunctx);
+#ifdef SUN_MKL_DENSE
+          s->qspccQueue = new sycl::queue(sycl::default_selector_v);
+          s->flag = SUNMemoryHelper_Sycl(&s->memhelper);
+          if (check_flag(&s->flag, "SUNMemoryHelper_Sycl", 1)) return s;
+          // remember function being called
+          qspcc_cvode_rhs_fn = f;
+#endif
            s->cvode_mem = CVodeCreate(CV_BDF, s->sunctx);
            if (check_flag((void *)s->cvode_mem, "CVodeCreate", ZERO)) { return s; }
         }
@@ -264,6 +350,30 @@ SUN_INIT *sun_init_d(SUN_INIT *s, int (*f)(realtype t, N_Vector y, N_Vector ydot
     /* Call CVDiag/ CVDlsSetLinearSolver / CVSpilsSetLinearSolver to attach the matrix and linear solver to CVode */
     s->flag = CVodeSetLinearSolver(s->cvode_mem, LS, A);
     if(check_flag(&s->flag, "CVodeSetLinearSolver", 1)) return s;
+#elif defined(SUN_MKL_DENSE)
+
+    A = SUNMatrix_OneMklDense(
+            y_len,
+            y_len,
+            SUNMEMTYPE_DEVICE,
+            s->memhelper,
+            s->qspccQueue,
+            s->sunctx
+        );
+
+    s->matrix = A;
+    if (check_flag((void *) A, "SUNMatrix_OneMklDense", 0)) return s;
+
+    LS = SUNLinSol_OneMklDense(s->y, A, s->sunctx);
+
+    s->linearsolver = LS;
+    if (check_flag((void *) LS, "SUNLinSol_OneMklDense", 0)) return s;
+
+    s->flag = CVodeSetLinearSolver(s->cvode_mem, LS, A);
+    if (check_flag(&s->flag, "CVodeSetLinearSolver", 1)) return s;
+
+    s->flag = CVodeSetJacFn(s->cvode_mem, qspcc_onemkl_dq_jac);
+    if (check_flag(&s->flag, "CVodeSetJacFn", 1)) return s;
 #elif defined(SUN_SPGMR)
     /* Create dense SUNLinearSolver object for use by CVode */
 #ifdef SUN_PRECONDITION_BAND
@@ -768,35 +878,87 @@ INTEGRATION_OPTS* setIntegrationOptions(double absTol, double relTol, double max
 
 SUN_INIT *sun_free(SUN_INIT *s)
 {
+    if (s == NULL) {
+        return NULL;
+    }
+
     /* ------------------------------------------------------------- OUTPUT */
 
-    /* print elapsed time*/
-    /*fprintf(stderr, "%.3f s"NEW_LINE, timediff(s->start, s->stop));*/
+    /* print elapsed time */
+    /* fprintf(stderr, "%.3f s" NEW_LINE, timediff(s->start, s->stop)); */
 
     /* print final statistics */
-    /*print_stats(s->cvode_mem);*/
+    /* print_stats(s->cvode_mem); */
 
     /* ----------------------------------------------------------- CLEAN UP */
-    /* free y vector */
-    //N_VDestroy_Serial(s->y);
 
-    /* free integrator memory */
-    //CVodeFree(&s->cvode_mem);
+    /*
+     * NOTE:
+     * QSPcc currently seems to keep y and cvode_mem alive/commented out.
+     * If ownership belongs here, uncomment these.
+     */
+    /*
+    if (s->y != NULL) {
+        N_VDestroy(s->y);
+        s->y = NULL;
+    }
 
-    /* free linear solver */
-    SUNLinSolFree(s->linearsolver);
+    if (s->cvode_mem != NULL) {
+        CVodeFree(&s->cvode_mem);
+        s->cvode_mem = NULL;
+    }
+    */
 
-#if defined(SUN_DENSE)
-    /* free matrix */
-    SUNMatDestroy(s->matrix);
-#elif defined(SUN_SPGMR)
-#elif defined(SUN_BAND)
-    /* free matrix */
-    SUNMatDestroy(s->matrix);
-#else
-    /* DEFAULT TO DENSE LINEAR SOLVER */
-    /* free matrix */
-    SUNMatDestroy(s->matrix);
+#if QSPCC_SUNDIALS_VERSION > 2
+    /* free linear solver first, since it may reference the matrix */
+    if (s->linearsolver != NULL) {
+        SUNLinSolFree(s->linearsolver);
+        s->linearsolver = NULL;
+    }
+
+    /*
+     * Free matrix for matrix-based solvers.
+     * SPGMR is matrix-free in your current branch, so matrix may be NULL.
+     */
+#if defined(SUN_DENSE) || \
+    defined(SUN_LAPACK_DENSE) || \
+    defined(SUN_BAND) || \
+    defined(SUN_LAPACK_BAND) || \
+    defined(SUN_MKL_DENSE) || \
+    defined(SUN_ONEMKL)
+
+    if (s->matrix != NULL) {
+        SUNMatDestroy(s->matrix);
+        s->matrix = NULL;
+    }
+
+#endif
+#endif
+
+#if defined(SUN_MKL_DENSE)
+    /*
+     * Destroy oneMKL/SYCL support after SUNDIALS objects that may use it.
+     */
+    if (s->memhelper != NULL) {
+        SUNMemoryHelper_Destroy(s->memhelper);
+        s->memhelper = NULL;
+    }
+
+#ifdef __cplusplus
+    if (s->qspccQueue != NULL) {
+        delete s->qspccQueue;
+        s->qspccQueue = NULL;
+    }
+#endif
+
+    qspcc_cvode_rhs_fn = NULL;
+#endif
+
+#if QSPCC_SUNDIALS_VERSION >= 6
+    if (s->sunctx != NULL) {
+        SUNContext_Free(&s->sunctx);
+        s->sunctx = NULL;
+    }
 #endif
 
     return s;

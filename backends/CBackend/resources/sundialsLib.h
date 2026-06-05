@@ -16,6 +16,13 @@
 #include <sundials/sundials_context.h>
 #endif
 
+#ifdef SUN_MKL_DENSE
+#ifdef __cplusplus
+#include <sycl/sycl.hpp>
+#endif
+#include <sundials/sundials_memory.h>
+#endif
+
 #if QSPCC_SUNDIALS_VERSION >= 7
 typedef sunrealtype realtype;
 #endif
@@ -107,6 +114,14 @@ typedef struct SUNDIALS_INITIALIZER
 #if QSPCC_SUNDIALS_VERSION >= 6
     SUNContext sunctx;
 #endif
+
+#ifdef SUN_MKL_DENSE
+#ifdef __cplusplus
+    sycl::queue *qspccQueue;
+#endif
+    SUNMemoryHelper memhelper;
+#endif
+
 } SUN_INIT;
 
 
