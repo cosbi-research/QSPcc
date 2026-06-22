@@ -275,7 +275,7 @@ public class CompilerController {
 	    } catch (Exception e) {
 		translation_errors += 1;
 		logger.fatal(
-			"Failed error initializing translation, do you have write permission on the destination folder?");
+			"Error initializing translation, do you have write permission on the destination folder?");
 		if (e.getCause() != null)
 		    logger.fatal("Cause: " + e.getCause().getMessage());
 		logger.debug("Error serializing program tree: " + e.getMessage(), e);
