@@ -849,7 +849,6 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 					results.push(translateUnaryScalarExpression(topLevel, curRoot, left, child_results.get(0),
 							sparseParams[0]));
 				} else {
-
 					// binary
 					AASTNode left = curRoot.childs().get(0);
 					AASTNode right = curRoot.childs().get(1);
@@ -5801,6 +5800,8 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 
 			IntType leftrows = matrixLeftDims[0];
 			IntType leftcols = matrixLeftDims[1];
+
+			IntType rightrows = matrixRightDims[0];
 			IntType rightcols = null;
 			if (matrixRightDims.length > 1)
 				rightcols = matrixRightDims[1];
@@ -5809,8 +5810,16 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 
 			// final matrix dimension: mxn
 			String m = leftrows.valueAsString();
-			String k = leftcols.valueAsString();
+			String k1 = leftcols.valueAsString();
+			String k2 = rightrows.valueAsString();
 			String n = rightcols.valueAsString();
+
+			// assert k1 == k2 before doing multiplication, add explicative message for user
+			sb.append("assert(").append(k1).append(" == ").append(k2)
+				.append(" && \"Incompatible matrix dimensions: ").append(k1)
+				.append(" != ").append(k2).append("\");").append(NL);
+			newTranslation(curRoot, sb.toString());
+			sb = new StringBuffer();
 
 			// createUninitializedMatrix(newSymbol, SymbolType.SCALAR,
 			// newSymbolDims);
@@ -5892,8 +5901,9 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 				sb.append(leftT + STRUCT_ACCESS + "columns, ");
 				sb.append(sparseMatrixType).append(", ");
 			}
+			// with sanitychecks=on assert should check k1 == k2
 			sb.append(rightT + STRUCT_ACCESS + "matrix, ").append(newSymbol + STRUCT_ACCESS + "matrix, ")
-					.append(m + ",").append(n + ",").append(k).append(");").append(NL);
+					.append(m + ",").append(n + ",").append(k1).append(");").append(NL);
 
 			// allocating memory for the product expression
 			String[] targetDimensions = new String[] { m, n };
