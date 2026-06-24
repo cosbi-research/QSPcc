@@ -24,6 +24,7 @@
 #include <sycl/sycl.hpp>
 #include <sundials/sundials_memory.h>
 #include <sunmemory/sunmemory_sycl.h>
+#include <nvector/nvector_sycl.h>
 #include <sunmatrix/sunmatrix_onemkldense.h>
 #include <sunlinsol/sunlinsol_onemkldense.h>
 #include <float.h>
@@ -294,9 +295,38 @@ SUN_INIT *sun_init_d(SUN_INIT *s, int (*f)(realtype t, N_Vector y, N_Vector ydot
     s->t = tinit;
 
     /* Create serial vector of length N_SPECIES for initial conditions. */
-    s->y = N_VNew_Serial(y_len, s->sunctx);
+#ifdef SUN_MKL_DENSE
+	#ifdef DEBUG
+    fprintf(stderr, "SYCL device: %s\n",
+            s->qspccQueue->get_device()
+                .get_info<sycl::info::device::name>()
+                .c_str());
+    fprintf(stderr, "SYCL backend queue created\n");
+    
+    size_t jac_bytes = (size_t)y_len * (size_t)y_len * sizeof(realtype);
+    fprintf(stderr, "SUNMatrix_OneMklDense size: %ld x %ld\n",
+        (long)y_len, (long)y_len);
 
+    fprintf(stderr, "Dense matrix bytes: %.3f MiB\n",
+        (double)jac_bytes / (1024.0 * 1024.0));
+
+    fprintf(stderr, "global_mem_size: %.3f MiB\n",
+        (double)s->qspccQueue->get_device().get_info<sycl::info::device::global_mem_size>() / 1024.0 / 1024.0);
+
+    fprintf(stderr, "max_mem_alloc_size: %.3f MiB\n",
+            (double)s->qspccQueue->get_device().get_info<sycl::info::device::max_mem_alloc_size>() / 1024.0 / 1024.0);
+
+    fprintf(stderr, "local_mem_size: %.3f KiB\n",
+            (double)s->qspccQueue->get_device().get_info<sycl::info::device::local_mem_size>() / 1024.0);
+    #endif
+
+    s->y = N_VNew_Sycl(y_len, s->qspccQueue, s->sunctx);
+    if (check_flag((void *)s->y, "N_VNew_Sycl", ZERO)) { return s; }
+#else
+    s->y = N_VNew_Serial(y_len, s->sunctx);
     if (check_flag((void *)s->y, "N_VNew_Serial", ZERO)) { return s; }
+#endif
+
 
     /* initial conditions for y */
     /* ---- NEW -----------*/
@@ -351,20 +381,6 @@ SUN_INIT *sun_init_d(SUN_INIT *s, int (*f)(realtype t, N_Vector y, N_Vector ydot
     s->flag = CVodeSetLinearSolver(s->cvode_mem, LS, A);
     if(check_flag(&s->flag, "CVodeSetLinearSolver", 1)) return s;
 #elif defined(SUN_MKL_DENSE)
-	#ifdef DEBUG
-    fprintf(stderr, "SYCL device: %s\n",
-            s->qspccQueue->get_device()
-                .get_info<sycl::info::device::name>()
-                .c_str());
-    fprintf(stderr, "SYCL backend queue created\n");
-    
-    size_t jac_bytes = (size_t)y_len * (size_t)y_len * sizeof(realtype);
-    fprintf(stderr, "SUNMatrix_OneMklDense size: %ld x %ld\n",
-        (long)y_len, (long)y_len);
-
-    fprintf(stderr, "Dense matrix bytes: %.3f MiB\n",
-        (double)jac_bytes / (1024.0 * 1024.0));
-    #endif
     A = SUNMatrix_OneMklDense(
             y_len,
             y_len,
