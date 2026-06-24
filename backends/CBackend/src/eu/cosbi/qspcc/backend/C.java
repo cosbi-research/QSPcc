@@ -5002,10 +5002,13 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			// get the result type of
 			GType typeOf = ((DimensionType) type).of();
 			String prefix = null;
+			String cast=null;
 			if (typeOf instanceof ScalarType) {
 				prefix = "d";
+				cast = "double";
 			} else {
 				prefix = "i";
+				cast = "int";
 			}
 
 			String[] toBeSetParameters = new String[4];
@@ -5020,8 +5023,8 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			String newMatrix = getNodeSymbol(outNode);
 			newComment(curRoot);
 			newTranslation(curRoot,
-					outNode.symbol() + " = ((" + slicetype + "){.start = " + toBeSetParameters[0] + ", .step = "
-							+ toBeSetParameters[1] + ", .end = " + toBeSetParameters[2] + ", .dim1 = "
+					outNode.symbol() + " = ((" + slicetype + "){.start = ("+cast+") " + toBeSetParameters[0] + ", .step = ("+cast+") "
+							+ toBeSetParameters[1] + ", .end = ("+cast+") " + toBeSetParameters[2] + ", .dim1 = "
 							+ toBeSetParameters[3] + ", .linear = true});" + NL);
 			return outNode.symbol();
 		} else {
@@ -6141,10 +6144,13 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			// get the result type of
 			GType typeOf = ((DimensionType) type).of();
 			String prefix = null;
+			String cast = null;
 			if (typeOf instanceof ScalarType) {
 				prefix = "d";
+				cast = "double";
 			} else {
 				prefix = "i";
+				cast = "int";
 			}
 
 			String[] toBeSetParameters = new String[4];
@@ -6190,8 +6196,8 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			AASTNode outNode = getOutputNode(curRoot);
 			newComment(curRoot);
 			newTranslation(curRoot,
-					outNode.symbol() + " = ((" + slicetype + "){.start = " + toBeSetParameters[0] + ", .step = "
-							+ toBeSetParameters[1] + ", .end = " + toBeSetParameters[2] + ", .dim1 = "
+					outNode.symbol() + " = ((" + slicetype + "){.start = ("+cast+") " + toBeSetParameters[0] + ", .step = ("+cast+") "
+							+ toBeSetParameters[1] + ", .end = ("+cast+") " + toBeSetParameters[2] + ", .dim1 = "
 							+ toBeSetParameters[3] + ", .linear = true});" + NL);
 			return outNode.symbol();
 		} else {
@@ -13938,24 +13944,27 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			String dim, boolean sliceLinear) throws UndefinedTranslationException {
 		GType start = sliceType.slices().first();
 		String slicetype = null;
+		String cast = null;
 		if (start.equals(BType.INT)) {
 			slicetype = SLICE_TYPE_I;
+			cast = "int";
 		} else if (start.equals(BType.SCALAR)) {
 			slicetype = SLICE_TYPE_D;
+			cast = "double";
 		} else
 			throw new UndefinedTranslationException(CErrorMessage.UNSUPPORTED_TYPE, null, start,
 					BType.MATRIX_ACCESS_SLICE);
 
 		StringBuffer sb = new StringBuffer();
 		if (dim == null) {
-			sb.append(outNodeName).append(" = ").append("((" + slicetype + "){.start = " + startv + ", .step = " + stepv
-					+ ", .end = " + endv + ", .dim1 = -1, .linear = " + Boolean.toString(sliceLinear) + "})")
+			sb.append(outNodeName).append(" = ").append("((" + slicetype + "){.start = (" + cast + ") " + startv + ", .step = (" + cast + ") " + stepv
+					+ ", .end = (" + cast + ") " + endv + ", .dim1 = -1, .linear = " + Boolean.toString(sliceLinear) + "})")
 					.append(";").append(NL);
 			sb.append(outNodeName).append(STRUCT_ACCESS).append("dim1 = ").append(getSequenceDimension(sliceType))
 					.append(";").append(NL);
 		} else
 			sb.append(outNodeName).append(" = ")
-					.append("((" + slicetype + "){.start = " + startv + ", .step = " + stepv + ", .end = " + endv
+					.append("((" + slicetype + "){.start = (" + cast + ") " + startv + ", .step = (" + cast + ") " + stepv + ", .end = (" + cast + ") " + endv
 							+ ", .dim1 = " + dim + ", .linear = " + Boolean.toString(sliceLinear) + "})")
 					.append(";").append(NL);
 
