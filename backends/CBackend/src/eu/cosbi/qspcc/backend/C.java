@@ -10109,9 +10109,12 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 
 			// deallocate integration_times_struct
 			bufferStmt.append("qspcc_free(").append(integration_times_struct).append(");").append(NL);
-			// deallocate the sundial-used memory with SunFree
-			bufferStmt.append(sundialInitializerName).append(" = sun_free(").append(sundialInitializerName).append(")")
-					.append(";").append(NL);
+
+			if( !curApplyNode.parentExists(NodeType.WHILE) && !curApplyNode.parentExists(NodeType.FOR) ) {
+				// deallocate the sundial-used memory with SunFree
+				bufferStmt.append(sundialInitializerName).append(" = sun_free(").append(sundialInitializerName).append(")")
+						.append(";").append(NL);
+			}
 
 			// assign the output node value
 			outNode = getOutputNode(outSymbol);
