@@ -46,6 +46,12 @@
 #include "assert.h"
 #include "math.h"
 
+// guard to check that realtype is double
+// if not compilation will fail
+typedef char qspcc_realtype_must_be_double[
+    (sizeof(realtype) == sizeof(double)) ? 1 : -1
+];
+
 //static variable
 static INTEGRATION_OPTS global_opts;
 
@@ -621,298 +627,436 @@ static inline realtype getStep(INTEGRATION_TIMES *timesteps, int k){
    }
 }
 
-// memory-efficient version with virtual timesteps array defined by triple start,step,end
-void sd_sun_eval(SUN_INIT *s, int dest_rows, int dest_cols, INTEGRATION_TIMES *timesteps, int transpose, int n_out_matrices, ...){
+void sd_sun_eval(
+    SUN_INIT *s,
+    int dest_rows,
+    int dest_cols,
+    INTEGRATION_TIMES *timesteps,
+    int transpose,
+    int n_out_matrices,
+    ...
+) {
+    (void)dest_rows;
+    (void)dest_cols;
+    (void)transpose;
+
     va_list vl;
     va_start(vl, n_out_matrices);
+
     double *outmatrices[n_out_matrices];
     int i;
-    for(i = 0 ; i < n_out_matrices ; ++i )
-	outmatrices[i] = va_arg(vl, double *);
-    
+
+    for (i = 0; i < n_out_matrices; ++i) {
+        outmatrices[i] = va_arg(vl, double *);
+    }
+
+    va_end(vl);
+
     assert(n_out_matrices <= 2 && "Only the first two output matrices will be used");
-    int k, n, retcode, retry;
+
+#ifdef SUN_MKL_DENSE
+    int y_len = (int) N_VGetLength(s->y);
+#else
     int y_len = NV_LENGTH_S(s->y);
+#endif
+
     s->start = clock();
 
-    realtype start = timesteps->tin; 
-    realtype step = timesteps->step;
-    realtype end = timesteps->tend;
+    realtype start = timesteps->tin;
+    realtype step  = timesteps->step;
     int times_length = timesteps->len;
 
     char useArray = timesteps->times == NULL;
-    if(useArray)
-      // first output time
-      s->tout = start + step;
-    else
-      s->tout = getStep(timesteps, 1);
 
-    realtype *dest,*tdest;
-    int transpose_shift = ZERO;
-    /* ADAPTIVE CHANGE OF ORDER */
-    int mode=ONE;
+    if (useArray) {
+        s->tout = start + step;
+    } else {
+        s->tout = getStep(timesteps, 1);
+    }
+
+    realtype *tdest;
+    realtype *dest;
+
+    if (n_out_matrices == 1) {
+        /*
+         * Combined output matrix:
+         * row layout is [t, y0, y1, ...].
+         */
+        tdest = NULL;
+        dest  = (realtype *) outmatrices[0];
+    } else {
+        /*
+         * Separate output matrices:
+         * tdest gets t, dest gets y.
+         */
+        tdest = (realtype *) outmatrices[0];
+        dest  = (realtype *) outmatrices[1];
+    }
+
+    int k;
+    int retcode;
+    int retry;
+    int mode = ONE;
     int max_steps;
     double hu;
 
-    if( n_out_matrices == 1 ){
-    	tdest = (realtype *) outmatrices[0];
-	dest = tdest;
-        transpose_shift = ONE;
-    }else{
-        tdest = (realtype *) outmatrices[0];
-        dest = (realtype *) outmatrices[1];
-    }
+    for (k = ONE; k < times_length; ++k) {
+#ifdef SUN_MKL_DENSE
+        try {
+            N_VCopyFromDevice_Sycl(s->y);
+        } catch (const sycl::exception &e) {
+            fprintf(stderr,
+                    "N_VCopyFromDevice_Sycl(s->y) failed in sd_sun_eval: %s\n",
+                    e.what());
+            exit(1);
+        }
 
-    for (k = ONE; k < times_length; k++)
-    {
-        /*
-        * As of version 2.3.0 (from documentation):
-        *
-        * Passing a value of ZERO for the maximum step size, the minimum step
-        * size, or for maxsteps results in the solver using the corresponding
-        * default value (infinity, 0, 500, respectively).
-        */
+        realtype *ydata = N_VGetArrayPointer(s->y);
+#else
+        realtype *ydata = NV_DATA_S(s->y);
+#endif
 
-        /* record output only at desired points */
-        /* some interfaces like MATLAB prefer row-major output */    
-        if (transpose)
-        {
-            tdest[(k) + (dest_rows *  (ZERO))] = s->t;
+        if (ydata == NULL) {
+            fprintf(stderr, "QSPcc/SUNDIALS error: NULL ydata in sd_sun_eval\n");
+            exit(1);
+        }
 
-            for (n = ZERO; n < y_len; n++)                
-            {
-                dest[(k ) + (dest_rows * (transpose_shift + n))] = Ith(s->y, n);
+        if (n_out_matrices == 1) {
+            *dest++ = s->t;
+            memcpy(dest, ydata, (size_t)y_len * sizeof(realtype));
+            dest += y_len;
+        } else {
+            *tdest++ = s->t;
+            memcpy(dest, ydata, (size_t)y_len * sizeof(realtype));
+            dest += y_len;
+        }
+
+        retcode = CV_CONV_FAILURE;
+        retry = 0;
+        max_steps = DEFAULT_NUMBER_STEPS;
+
+        while (retcode != CV_SUCCESS && retry++ < MAX_RETRY) {
+            if (mode == ZERO) {
+                retcode = CVodeGetLastStep(s->cvode_mem, &hu);
+
+                if (retcode == CV_SUCCESS) {
+                    if (hu > RESET_TO_DEFAULT_ORDER_AFTER_H_ABOVE) {
+#ifdef DEBUG
+                        print_stats(s->cvode_mem);
+#endif
+                        CVodeSetMaxOrd(s->cvode_mem, s->max_order);
+
+                        retcode = CVodeSStolerances(
+                            s->cvode_mem,
+                            s->rtol,
+                            s->atol
+                        );
+
+                        retcode = CVodeSetMaxNumSteps(
+                            s->cvode_mem,
+                            DEFAULT_NUMBER_STEPS
+                        );
+
+                        retcode = CVodeReInit(s->cvode_mem, s->t, s->y);
+
+                        if (retcode != CV_SUCCESS) {
+                            fprintf(stderr,
+                                    "Failed to reinitialize to time %.4f after re-setting integration order to %d, error code %d\n",
+                                    s->t,
+                                    s->max_order,
+                                    retcode);
+                        }
+
+                        mode = ONE;
+                    }
+                } else {
+                    fprintf(stderr,
+                            "Failed to get last step size at current time %.4f, error code %d\n",
+                            s->t,
+                            retcode);
+                }
+            }
+
+            retcode = CVode(
+                s->cvode_mem,
+                s->tout,
+                s->y,
+                &s->t,
+                CV_NORMAL
+            );
+
+            if (retcode == CV_SUCCESS) {
+                if (k < times_length - 1) {
+                    if (useArray) {
+                        s->tout += step;
+                    } else {
+                        s->tout = getStep(timesteps, k + 1);
+                    }
+                }
+            } else if (mode == ONE && retcode == CV_TOO_MUCH_ACC) {
+                fprintf(stderr, "Too much accuracy requested at time %.4f\n", s->t);
+            } else if (mode == ONE && retcode == CV_TOO_MUCH_WORK) {
+#ifdef DEBUG
+                print_stats(s->cvode_mem);
+#endif
+                max_steps *= 2;
+
+                fprintf(stderr,
+                        "Too much work, raising maximum number of steps to %d at time %.4f\n",
+                        max_steps,
+                        s->t);
+
+                retcode = CVodeSetMaxNumSteps(s->cvode_mem, max_steps);
+                retcode = CVodeReInit(s->cvode_mem, s->t, s->y);
+
+                retcode = CVode(
+                    s->cvode_mem,
+                    s->tout,
+                    s->y,
+                    &s->t,
+                    CV_NORMAL
+                );
+
+                if (retcode != CV_SUCCESS) {
+                    fprintf(stderr, "Failed to reach time %.4f\n", s->tout);
+                } else {
+                    if (k < times_length - 1) {
+                        if (useArray) {
+                            s->tout += step;
+                        } else {
+                            s->tout = getStep(timesteps, k + 1);
+                        }
+                    }
+                }
+            } else if (
+                mode == ONE &&
+                (retcode == CV_ERR_FAILURE || retcode == CV_CONV_FAILURE)
+            ) {
+#ifdef DEBUG
+                print_stats(s->cvode_mem);
+#endif
+                retcode = CVodeSetMaxOrd(s->cvode_mem, 1);
+
+                retcode = CVodeSStolerances(
+                    s->cvode_mem,
+                    LOOSE_REL_TOL,
+                    LOOSE_ABS_TOL
+                );
+
+                retcode = CVodeSetMaxNumSteps(
+                    s->cvode_mem,
+                    LOOSE_NUMBER_STEPS
+                );
+
+                retcode = CVodeReInit(s->cvode_mem, s->t, s->y);
+
+                mode = ZERO;
+
+                if (retcode != CV_SUCCESS) {
+                    fprintf(stderr,
+                            "Failed to reinitialize at time %.4f after lowering integration order to 1, error code %d\n",
+                            s->t,
+                            retcode);
+                } else {
+                    retcode = CVode(
+                        s->cvode_mem,
+                        s->tout,
+                        s->y,
+                        &s->t,
+                        CV_NORMAL
+                    );
+
+                    if (retcode != CV_SUCCESS) {
+                        fprintf(stderr,
+                                "Failed to reach time %.4f even after lowering integration order to 1, error code %d\n",
+                                s->tout,
+                                retcode);
+                    } else {
+                        if (k < times_length - 1) {
+                            if (useArray) {
+                                s->tout += step;
+                            } else {
+                                s->tout = getStep(timesteps, k + 1);
+                            }
+                        }
+                    }
+                }
+            } else {
+                fprintf(stderr,
+                        "Failed to reach time %.4f, error code %d\n",
+                        s->tout,
+                        retcode);
             }
         }
-            
-        /* otherwise we can write column-major sequentially */
-        else
-        {    
-            *tdest++ = s->t;
-                
-           for (n = ZERO; n < y_len; n++)
-            {
-                *dest++ = Ith(s->y, n);
-            }
-        }    
 
-	retcode = CV_CONV_FAILURE;
-	retry = 0;
-	max_steps = DEFAULT_NUMBER_STEPS;
-	while(retcode != CV_SUCCESS && retry++ < MAX_RETRY){
-		if(mode == ZERO){
-		   /*Test for sufficient increase in step size*/
-		   retcode = CVodeGetLastStep(s->cvode_mem, &hu); 
-		   if (retcode == CV_SUCCESS){
-			   if (hu > RESET_TO_DEFAULT_ORDER_AFTER_H_ABOVE) {
-				#ifdef DEBUG
-				print_stats(s->cvode_mem);
-				#endif
-				/* Reset maximum order */
-				CVodeSetMaxOrd(s->cvode_mem, s->max_order);
-				/* Call CVodeSVtolerances to specify the scalar relative tolerance
-				* and vector absolute tolerances */
-				retcode = CVodeSStolerances(s->cvode_mem, s->rtol, s->atol);
-				/* maximum step number, just the default value because the matlab option doesn't exist*/ 
-				retcode = CVodeSetMaxNumSteps(s->cvode_mem, DEFAULT_NUMBER_STEPS);
-				/* Reinitialize solver with tight tolerances */
-				retcode = CVodeReInit(s->cvode_mem, s->t, s->y);
-				if(retcode != CV_SUCCESS)
-					fprintf(stderr, "Failed to reinitialize to time %.4f after re-setting integration order to %d, error code %d\n", s->t, s->max_order, retcode);
-				mode = ONE;
-			   } 
-		   }else
-			fprintf(stderr, "Failed to get last step size at current time %.4f, error code %d\n", s->t, retcode);
-		}
-
-		/* continue solving */
-		retcode = CVode(s->cvode_mem, s->tout, s->y, &s->t, CV_NORMAL);
-		if (retcode == CV_SUCCESS)
-		{
-			if(k<times_length-1)
-				if(useArray)
-					s->tout += step;
-				else
-					s->tout = getStep(timesteps, k+1);
-		}else if(mode == ONE && (retcode == CV_TOO_MUCH_ACC))
-			fprintf(stderr, "Too much accuracy requested at time %.4f\n", s->t);
-		else if(mode == ONE && retcode == CV_TOO_MUCH_WORK){
-			#ifdef DEBUG
-			print_stats(s->cvode_mem);
-			#endif
-			max_steps *= 2;
-			fprintf(stderr, "Too much work, raising maximum number of steps to %d at time %.4f\n", max_steps, s->t);
-			/* maximum step number, just the default value because the matlab option doesn't exist*/ 
-			retcode = CVodeSetMaxNumSteps(s->cvode_mem, max_steps);
-			/* Reinitialize solver with loose tolerances */
-			retcode = CVodeReInit(s->cvode_mem, s->t, s->y);
-			/* retry */
-			retcode = CVode(s->cvode_mem, s->tout, s->y, &s->t, CV_NORMAL);
-			if(retcode != CV_SUCCESS)
-				fprintf(stderr, "Failed to reach time %.4f\n", s->tout);
-			else{
-				if(k<times_length-1)
-					if(useArray)
-						s->tout += step;
-					else
-						s->tout = getStep(timesteps, k+1);
-			}			
-		}else if(mode == ONE && (retcode == CV_ERR_FAILURE || retcode == CV_CONV_FAILURE)){
-			/* adapt step fallback to order 1, method backward euler */
-			#ifdef DEBUG
-			print_stats(s->cvode_mem);
-			#endif
-			/* Enforce backward Euler */
-			retcode = CVodeSetMaxOrd(s->cvode_mem, 1);
-			/* Call CVodeSVtolerances to specify the scalar relative tolerance
-			* and vector absolute tolerances */
-			retcode = CVodeSStolerances(s->cvode_mem, LOOSE_REL_TOL, LOOSE_ABS_TOL);
-			/* maximum step number, just the default value because the matlab option doesn't exist*/ 
-			retcode = CVodeSetMaxNumSteps(s->cvode_mem, LOOSE_NUMBER_STEPS);
-			/* Reinitialize solver with loose tolerances */
-			retcode = CVodeReInit(s->cvode_mem, s->t, s->y);
-			mode = ZERO;
-			if(retcode != CV_SUCCESS)
-				fprintf(stderr, "Failed to reinitialize at time %.4f after lowering integration order to 1, error code %d\n", s->t, retcode);
-			else{
-				/* retry */
-				retcode = CVode(s->cvode_mem, s->tout, s->y, &s->t, CV_NORMAL);
-				if(retcode != CV_SUCCESS)
-					fprintf(stderr, "Failed to reach time %.4f even after lowering integration order to 1, error code %d\n", s->tout, retcode);
-				else{
-					if(k<times_length-1)
-						if(useArray)
-							s->tout += step;
-						else
-							s->tout = getStep(timesteps, k+1);
-				}
-			}
-		}else
-			fprintf(stderr, "Failed to reach time %.4f, error code %d\n", s->tout, retcode);
-	}
-	if(retry >= MAX_RETRY){
-		fprintf(stderr, "Can't reach time %.4f, retcode %d exiting.\n", s->tout, retcode);
-		exit(1);
-	}
+        if (retry >= MAX_RETRY) {
+            fprintf(stderr,
+                    "Can't reach time %.4f, retcode %d exiting.\n",
+                    s->tout,
+                    retcode);
+            exit(1);
+        }
     }
 
-    /* write the last one*/
-    if (transpose)
-        {
-            tdest[(times_length-1) + (dest_rows *  (ZERO))] = s->t;
+    /* write final row */
+#ifdef SUN_MKL_DENSE
+    try {
+        N_VCopyFromDevice_Sycl(s->y);
+    } catch (const sycl::exception &e) {
+        fprintf(stderr,
+                "N_VCopyFromDevice_Sycl(s->y) failed in sd_sun_eval final copy: %s\n",
+                e.what());
+        exit(1);
+    }
 
-            for (n = ZERO; n < y_len; n++)                
-            {
-                dest[(times_length-1 ) + (dest_rows * (transpose_shift + n))] = Ith(s->y, n);
-            }
-        }
-            
-        /* otherwise we can write column-major sequentially */
-        else
-        {
-            *tdest++ = s->t;
-                
-           for (n = ZERO; n < y_len; n++)
-            {
-                *dest++ = Ith(s->y, n);
-            }
-        }    
+    realtype *ydata = N_VGetArrayPointer(s->y);
+#else
+    realtype *ydata = NV_DATA_S(s->y);
+#endif
+
+    if (ydata == NULL) {
+        fprintf(stderr, "QSPcc/SUNDIALS error: NULL ydata in sd_sun_eval final copy\n");
+        exit(1);
+    }
+
+    if (n_out_matrices == 1) {
+        *dest++ = s->t;
+        memcpy(dest, ydata, (size_t)y_len * sizeof(realtype));
+    } else {
+        *tdest++ = s->t;
+        memcpy(dest, ydata, (size_t)y_len * sizeof(realtype));
+    }
 
     s->stop = clock();
 }
 
-void sun_eval(SUN_INIT *s, int dest_rows, int dest_cols, realtype *integration_times, int times_length, int transpose, int n_out_matrices, ...)
-{
+void sun_eval(
+    SUN_INIT *s,
+    int dest_rows,
+    int dest_cols,
+    realtype *integration_times,
+    int times_length,
+    int transpose,
+    int n_out_matrices,
+    ...
+) {
+    (void)dest_rows;
+    (void)dest_cols;
+    (void)transpose;
+
     va_list vl;
     va_start(vl, n_out_matrices);
+
     double *outmatrices[n_out_matrices];
     int i;
-    for(i = 0 ; i < n_out_matrices ; ++i )
-	outmatrices[i] = va_arg(vl, double *);
+
+    for (i = 0; i < n_out_matrices; ++i) {
+        outmatrices[i] = va_arg(vl, double *);
+    }
+
+    va_end(vl);
 
     assert(n_out_matrices <= 2 && "Only the first two output matrices will be used");
-    int k, n;
+
+#ifdef SUN_MKL_DENSE
+    int y_len = (int) N_VGetLength(s->y);
+#else
     int y_len = NV_LENGTH_S(s->y);
-    s->start = clock();   
+#endif
+
+    s->start = clock();
     s->tout = integration_times[1];
 
-    realtype *dest,*tdest;
-    int transpose_shift = ZERO;
-    if( n_out_matrices == 1 ){
-    	tdest = (realtype *) outmatrices[0];
-	dest = tdest;
-        transpose_shift = ONE;
-    }else{
+    realtype *tdest;
+    realtype *dest;
+
+    if (n_out_matrices == 1) {
+        tdest = NULL;
+        dest  = (realtype *) outmatrices[0];
+    } else {
         tdest = (realtype *) outmatrices[0];
-        dest = (realtype *) outmatrices[1];
+        dest  = (realtype *) outmatrices[1];
     }
 
-    for (k = ONE; k < times_length; k++)
-    {
-        /*
-        * As of version 2.3.0 (from documentation):
-        *
-        * Passing a value of ZERO for the maximum step size, the minimum step
-        * size, or for maxsteps results in the solver using the corresponding
-        * default value (infinity, 0, 500, respectively).
-        */
+    int k;
 
-        /* record output only at desired points */
-        /* some interfaces like MATLAB prefer row-major output */    
-        if (transpose)
-        {
-            tdest[(k) + (dest_rows *  (ZERO))] = s->t;
-
-            for (n = ZERO; n < y_len; n++)                
-            {
-                dest[(k ) + (dest_rows * (transpose_shift + n))] = Ith(s->y, n);
-            }
+    for (k = ONE; k < times_length; ++k) {
+#ifdef SUN_MKL_DENSE
+        try {
+            N_VCopyFromDevice_Sycl(s->y);
+        } catch (const sycl::exception &e) {
+            fprintf(stderr,
+                    "N_VCopyFromDevice_Sycl(s->y) failed in sun_eval: %s\n",
+                    e.what());
+            exit(1);
         }
-            
-        /* otherwise we can write column-major sequentially */
-        else
-        {    
+
+        realtype *ydata = N_VGetArrayPointer(s->y);
+#else
+        realtype *ydata = NV_DATA_S(s->y);
+#endif
+
+        if (ydata == NULL) {
+            fprintf(stderr, "QSPcc/SUNDIALS error: NULL ydata in sun_eval\n");
+            exit(1);
+        }
+
+        if (n_out_matrices == 1) {
+            *dest++ = s->t;
+            memcpy(dest, ydata, (size_t)y_len * sizeof(realtype));
+            dest += y_len;
+        } else {
             *tdest++ = s->t;
-                
-           for (n = ZERO; n < y_len; n++)
-            {
-                *dest++ = Ith(s->y, n);
+            memcpy(dest, ydata, (size_t)y_len * sizeof(realtype));
+            dest += y_len;
+        }
+
+        if (
+            CVode(
+                s->cvode_mem,
+                s->tout,
+                s->y,
+                &s->t,
+                CV_NORMAL
+            ) == CV_SUCCESS
+        ) {
+            if (k < times_length - 1) {
+                s->tout = integration_times[k + 1];
             }
-        }    
-            
-        /* continue solving */
-        if (CVode(s->cvode_mem, s->tout, s->y, &s->t, CV_NORMAL) == CV_SUCCESS)
-        {
-        if(k<times_length-1)
-            s->tout = integration_times[k+1];
         }
     }
-    
-    /* write the last one*/
-    if (transpose)
-        {
-            tdest[(times_length-1) + (dest_rows *  (ZERO))] = s->t;
 
-            for (n = ZERO; n < y_len; n++)                
-            {
-                dest[(times_length-1 ) + (dest_rows * (transpose_shift + n))] = Ith(s->y, n);
-            }
-        }
-            
-        /* otherwise we can write column-major sequentially */
-        else
-        {
-           *tdest++ = s->t;
-                
-           for (n = ZERO; n < y_len; n++)
-            {
-                *dest++ = Ith(s->y, n);
-            }
-        }    
+    /* write final row */
+#ifdef SUN_MKL_DENSE
+    try {
+        N_VCopyFromDevice_Sycl(s->y);
+    } catch (const sycl::exception &e) {
+        fprintf(stderr,
+                "N_VCopyFromDevice_Sycl(s->y) failed in sun_eval final copy: %s\n",
+                e.what());
+        exit(1);
+    }
+
+    realtype *ydata = N_VGetArrayPointer(s->y);
+#else
+    realtype *ydata = NV_DATA_S(s->y);
+#endif
+
+    if (ydata == NULL) {
+        fprintf(stderr, "QSPcc/SUNDIALS error: NULL ydata in sun_eval final copy\n");
+        exit(1);
+    }
+
+    if (n_out_matrices == 1) {
+        *dest++ = s->t;
+        memcpy(dest, ydata, (size_t)y_len * sizeof(realtype));
+    } else {
+        *tdest++ = s->t;
+        memcpy(dest, ydata, (size_t)y_len * sizeof(realtype));
+    }
 
     s->stop = clock();
 }
-
 /*--------------------------------------------------------------------------*/
 
 /*
