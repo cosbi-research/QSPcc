@@ -56,6 +56,8 @@ static int (*qspcc_cvode_rhs_fn)(
     N_Vector ydot,
     void *user_data
 ) = NULL;
+
+int qspcc_mkl_host_rhs_mode = 0;
 #endif
 
 /* wraps the matrix function that defines the ODE in a sundial-compatible way */
@@ -172,16 +174,38 @@ static int qspcc_onemkl_dq_jac(
         return -1;
     }
 
-    sunindextype n = NV_LENGTH_S(y);
+    const sunindextype n = N_VGetLength(y);
 
-    realtype *y_data    = NV_DATA_S(y);
-    realtype *fy_data   = NV_DATA_S(fy);
-    realtype *ytmp_data = NV_DATA_S(tmp1);
-    realtype *ftmp_data = NV_DATA_S(tmp2);
+    /*
+     * y, fy, tmp1, tmp2 are SYCL NVectors.
+     * Copy y and fy from device once. During the finite-difference loop,
+     * run the CPU RHS on host-side SYCL NVector arrays without per-column
+     * device-host copies.
+     */
+    try {
+        N_VCopyFromDevice_Sycl(y);
+        N_VCopyFromDevice_Sycl(fy);
+    } catch (const sycl::exception &e) {
+        fprintf(stderr, "SUN_ONEMKL error: initial N_VCopyFromDevice_Sycl failed: %s\n",
+                e.what());
+        return -1;
+    }
 
-    memcpy(ytmp_data, y_data, (size_t)n * sizeof(realtype));
+    realtype *y_data    = N_VGetArrayPointer(y);
+    realtype *fy_data   = N_VGetArrayPointer(fy);
+    realtype *ytmp_data = N_VGetArrayPointer(tmp1);
+    realtype *ftmp_data = N_VGetArrayPointer(tmp2);
 
-    realtype *host_jac = (realtype *) malloc((size_t)n * (size_t)n * sizeof(realtype));
+    if (y_data == NULL || fy_data == NULL ||
+        ytmp_data == NULL || ftmp_data == NULL) {
+        fprintf(stderr, "SUN_ONEMKL error: N_VGetArrayPointer returned NULL\n");
+        return -1;
+    }
+
+    realtype *host_jac = (realtype *) malloc(
+        (size_t)n * (size_t)n * sizeof(realtype)
+    );
+
     if (host_jac == NULL) {
         fprintf(stderr, "SUN_ONEMKL error: host Jacobian allocation failed\n");
         return -1;
@@ -189,31 +213,57 @@ static int qspcc_onemkl_dq_jac(
 
     const realtype sqrteps = SUNRsqrt((realtype) DBL_EPSILON);
 
+    /*
+     * Tell the generated RHS wrapper:
+     *   do not call N_VCopyFromDevice_Sycl(y)
+     *   do not call N_VCopyToDevice_Sycl(ydot)
+     * because we are using host arrays directly here.
+     */
+    qspcc_mkl_host_rhs_mode = 1;
+
     for (sunindextype j = 0; j < n; ++j) {
-        realtype yj = y_data[j];
+        memcpy(ytmp_data, y_data, (size_t)n * sizeof(realtype));
+
+        realtype yj  = y_data[j];
         realtype inc = sqrteps * SUNMAX(SUNRabs(yj), ONE);
-        if (inc == ZERO) inc = sqrteps;
+
+        if (inc == ZERO) {
+            inc = sqrteps;
+        }
 
         ytmp_data[j] = yj + inc;
 
+        memset(ftmp_data, 0, (size_t)n * sizeof(realtype));
+
         int retval = qspcc_cvode_rhs_fn(t, tmp1, tmp2, user_data);
         if (retval != 0) {
-            ytmp_data[j] = yj;
+            qspcc_mkl_host_rhs_mode = 0;
             free(host_jac);
             return retval;
         }
 
+        /*
+         * SUNDIALS dense matrices are column-major:
+         * column j, row i -> j*n + i
+         */
         for (sunindextype i = 0; i < n; ++i) {
             host_jac[(size_t)j * (size_t)n + (size_t)i] =
                 (ftmp_data[i] - fy_data[i]) / inc;
         }
-
-        ytmp_data[j] = yj;
     }
+
+    qspcc_mkl_host_rhs_mode = 0;
 
     int retval = SUNMatrix_OneMklDense_CopyToDevice(Jac, host_jac);
 
     free(host_jac);
+
+    if (retval != 0) {
+        fprintf(stderr,
+                "SUN_ONEMKL error: SUNMatrix_OneMklDense_CopyToDevice failed with %d\n",
+                retval);
+    }
+
     return retval;
 }
 #endif
@@ -257,9 +307,14 @@ SUN_INIT *sun_init_d(SUN_INIT *s, int (*f)(realtype t, N_Vector y, N_Vector ydot
 	   s = (SUN_INIT *) qspcc_malloc(sizeof(SUN_INIT));
 	else{
 	   /* free previously allocated memory */
-	   N_VDestroy_Serial(s->y);
+	   N_VDestroy(s->y);
 	   if(init){
-		SUNContext_Free(&s->sunctx);
+#ifdef SUN_MKL_DENSE
+	      delete s->sunctx;
+              s->sunctx = NULL;
+#else
+	      SUNContext_Free(&s->sunctx);
+#endif
 		CVodeFree(&s->cvode_mem);
            }
     	}
@@ -267,16 +322,30 @@ SUN_INIT *sun_init_d(SUN_INIT *s, int (*f)(realtype t, N_Vector y, N_Vector ydot
         if(init){
            /* Call CVodeCreate to create the solver memory and specify the
             * Backward Differentiation Formula and the use of a Newton iteration */
-	       SUNContext_Create(0, &s->sunctx);
 #ifdef SUN_MKL_DENSE
-          s->qspccQueue = new sycl::queue(sycl::default_selector_v);
-          s->memhelper = SUNMemoryHelper_Sycl(s->sunctx);
-          if (check_flag((void *) s->memhelper, "SUNMemoryHelper_Sycl", 0)) return s;
-          // remember function being called
-          qspcc_cvode_rhs_fn = f;
+        s->sunctx = new sundials::Context();
+#if SYCL_LANGUAGE_VERSION >= 2020 && !defined(SUNDIALS_SYCL_2020_UNSUPPORTED)
+        s->qspccQueue = new sycl::queue(
+            sycl::gpu_selector_v,
+            sycl::property_list{sycl::property::queue::in_order{}}
+        );
+#else
+        sycl::gpu_selector selector;
+        s->qspccQueue = new sycl::queue(
+            selector,
+            sycl::property_list{sycl::property::queue::in_order{}}
+        );
 #endif
-           s->cvode_mem = CVodeCreate(CV_BDF, s->sunctx);
-           if (check_flag((void *)s->cvode_mem, "CVodeCreate", ZERO)) { return s; }
+        s->memhelper = SUNMemoryHelper_Sycl(*(s->sunctx));
+        if (check_flag((void *) s->memhelper, "SUNMemoryHelper_Sycl", 0)) return s;
+        // remember function being called
+        qspcc_cvode_rhs_fn = f;
+        s->cvode_mem = CVodeCreate(CV_BDF, *(s->sunctx));
+#else
+        SUNContext_Create(0, &s->sunctx);
+        s->cvode_mem = CVodeCreate(CV_BDF, s->sunctx);
+#endif
+        if (check_flag((void *)s->cvode_mem, "CVodeCreate", ZERO)) { return s; }
         }
 	
 	s->rtol = (realtype) opts->rel_tol;
@@ -319,23 +388,29 @@ SUN_INIT *sun_init_d(SUN_INIT *s, int (*f)(realtype t, N_Vector y, N_Vector ydot
     fprintf(stderr, "local_mem_size: %.3f KiB\n",
             (double)s->qspccQueue->get_device().get_info<sycl::info::device::local_mem_size>() / 1024.0);
     #endif
-
-    s->y = N_VNew_Sycl(y_len, s->qspccQueue, s->sunctx);
+    s->y = N_VNew_Sycl(y_len, s->qspccQueue, *(s->sunctx));
     if (check_flag((void *)s->y, "N_VNew_Sycl", ZERO)) { return s; }
 #else
     s->y = N_VNew_Serial(y_len, s->sunctx);
     if (check_flag((void *)s->y, "N_VNew_Serial", ZERO)) { return s; }
 #endif
 
-
-    /* initial conditions for y */
-    /* ---- NEW -----------*/
-    memcpy(NV_DATA_S(s->y), y, y_len*sizeof(double));
-    /*for (k = ZERO; k < y_len; k++)
+#if defined(__cplusplus) && defined(SUN_MKL_DENSE)
     {
-        Ith(s->y, k) = y[k];
-    }*/
-    /* ---- end NEW -----------*/
+        sunrealtype *yhost = N_VGetArrayPointer(s->y);
+        if (yhost == NULL) {
+            fprintf(stderr, "N_VGetArrayPointer failed for SYCL vector\n");
+            sun_free(s);
+            return NULL;
+        }
+
+        memcpy(yhost, y, y_len * sizeof(double));
+
+        N_VCopyToDevice_Sycl(s->y);
+    }
+#else
+    memcpy(NV_DATA_S(s->y), y, y_len*sizeof(double));
+#endif
 
     /* Call CVodeInit to initialize the integrator memory and specify the
     * user's right hand side function in y'=f(t,y), the inital time T0, and
@@ -387,13 +462,13 @@ SUN_INIT *sun_init_d(SUN_INIT *s, int (*f)(realtype t, N_Vector y, N_Vector ydot
             SUNMEMTYPE_DEVICE,
             s->memhelper,
             s->qspccQueue,
-            s->sunctx
+            *(s->sunctx)
         );
 
     s->matrix = A;
     if (check_flag((void *) A, "SUNMatrix_OneMklDense", 0)) return s;
 
-    LS = SUNLinSol_OneMklDense(s->y, A, s->sunctx);
+    LS = SUNLinSol_OneMklDense(s->y, A, *(s->sunctx));
 
     s->linearsolver = LS;
     if (check_flag((void *) LS, "SUNLinSol_OneMklDense", 0)) return s;
@@ -475,7 +550,11 @@ SUN_INIT *sun_init_d(SUN_INIT *s, int (*f)(realtype t, N_Vector y, N_Vector ydot
     if(check_flag(&s->flag, "CVodeSetNonlinearSolver", 1)) return s;
 #else
     /* create Newton nonlinear solver object */
+#ifdef SUN_MKL_DENSE
+    NLS = SUNNonlinSol_Newton(s->y, *(s->sunctx));
+#else
     NLS = SUNNonlinSol_Newton(s->y, s->sunctx);
+#endif
     if(check_flag((void *)&NLS, "SUNNonlinSol_Newton", 0)) return s;
     /* attach nonlinear solver object to CVode */
     s->flag = CVodeSetNonlinearSolver(s->cvode_mem, NLS);
@@ -984,10 +1063,12 @@ SUN_INIT *sun_free(SUN_INIT *s)
 #endif
 
 #if QSPCC_SUNDIALS_VERSION >= 6
-    if (s->sunctx != NULL) {
-        SUNContext_Free(&s->sunctx);
+#if defined(SUN_MKL_DENSE)
+	delete s->sunctx;
         s->sunctx = NULL;
-    }
+#else
+        SUNContext_Free(&s->sunctx);
+#endif
 #endif
 
     return s;

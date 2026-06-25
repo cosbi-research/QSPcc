@@ -19,6 +19,7 @@
 #ifdef SUN_MKL_DENSE
 #ifdef __cplusplus
 #include <sycl/sycl.hpp>
+#include <sundials/sundials_core.hpp>
 #endif
 #include <sundials/sundials_memory.h>
 #endif
@@ -82,6 +83,17 @@ typedef struct integration_times_def {
 	char type; /* if times is an array of realtype or int */
 } INTEGRATION_TIMES;
 
+#ifdef SUN_MKL_DENSE
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern int qspcc_mkl_host_rhs_mode;
+
+#ifdef __cplusplus
+}
+#endif
+#endif
 
 /*
 * SUNDIALS initializer data structure. Allows us to consolidate all SUNDIALS-
@@ -112,14 +124,15 @@ typedef struct SUNDIALS_INITIALIZER
     SUNLinearSolver linearsolver;
 #endif
 #if QSPCC_SUNDIALS_VERSION >= 6
+
+#if defined(__cplusplus) && defined(SUN_MKL_DENSE)
+    sundials::Context *sunctx;
+    sycl::queue *qspccQueue;
+    SUNMemoryHelper memhelper;
+#else
     SUNContext sunctx;
 #endif
 
-#ifdef SUN_MKL_DENSE
-#ifdef __cplusplus
-    sycl::queue *qspccQueue;
-#endif
-    SUNMemoryHelper memhelper;
 #endif
 
 } SUN_INIT;

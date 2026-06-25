@@ -10906,23 +10906,39 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		// but you have to call the function with the right parameters (we have
 		// them in java)
 
-		// cast t from realtype to double
-		bufferToWriteOn.append(indentTabs()).append("double t_as_double = (double) t").append(";").append(NL);
+	// cast t from realtype to double
+	bufferToWriteOn.append(indentTabs()).append("double t_as_double = (double) t").append(";").append(NL);
 
-		// transform the N_vector y in a matrix that can be handled
-		// by the function fn (in this case, the N_Vector is implemented as a
-		// NVECTOR_SERIAL
-		bufferToWriteOn.append(indentTabs()).append("realtype* y_as_realtype_matrix = NV_DATA_S(y)").append(";")
-				.append(NL);
-		bufferToWriteOn.append(indentTabs()).append("double* y_as_matrix= (double*) y_as_realtype_matrix").append(";")
-				.append(NL);
+	bufferToWriteOn.append("#ifdef SUN_MKL_DENSE").append(NL);
+	// --- case SYCL ---
 
-		bufferToWriteOn.append(indentTabs()).append("int dimension = NV_LENGTH_S(y)").append(";").append(NL);
+	bufferToWriteOn.append(indentTabs()).append("if (!qspcc_mkl_host_rhs_mode) {").append(NL);
+	bufferToWriteOn.append(indentTabs()).append(TAB).append("N_VCopyFromDevice_Sycl(y);").append(NL);
+	bufferToWriteOn.append(indentTabs()).append("}").append(NL);
 
-		// get the size of x
-		GType inputType = ((FunctionType) fun.expr()).inputs().get(1);
+    bufferToWriteOn.append(indentTabs()).append("realtype *y_as_realtype_matrix = N_VGetArrayPointer(y);").append(NL);
+    bufferToWriteOn.append(indentTabs()).append("realtype *ydot_as_realtype_matrix = N_VGetArrayPointer(ydot);").append(NL);
+    bufferToWriteOn.append(indentTabs()).append("double *y_as_matrix = (double *)y_as_realtype_matrix;").append(NL);
+    bufferToWriteOn.append(indentTabs()).append("double *ydot_as_matrix = (double *)ydot_as_realtype_matrix;").append(NL);
+    bufferToWriteOn.append(indentTabs()).append("int dimension = (int)N_VGetLength(y);").append(NL);
 
-		GType typeOf = null;
+	bufferToWriteOn.append("#else").append(NL);
+	// --- case SERIAL ---
+	// transform the N_vector y in a matrix that can be handled
+	// by the function fn (in this case, the N_Vector is implemented as a
+	// NVECTOR_SERIAL
+	bufferToWriteOn.append(indentTabs()).append("realtype* y_as_realtype_matrix = NV_DATA_S(y)").append(";")
+			.append(NL);
+	bufferToWriteOn.append(indentTabs()).append("double* y_as_matrix= (double*) y_as_realtype_matrix").append(";")
+			.append(NL);
+
+	bufferToWriteOn.append(indentTabs()).append("int dimension = NV_LENGTH_S(y)").append(";").append(NL);
+	// end case serial vector
+	bufferToWriteOn.append("#endif").append(NL);
+	// get the size of x
+	GType inputType = ((FunctionType) fun.expr()).inputs().get(1);
+
+	GType typeOf = null;
 		if (inputType instanceof DimensionType) {
 			typeOf = ((DimensionType) inputType).of();
 		} else {
@@ -11120,8 +11136,24 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 			bufferToWriteOn.append("#endif").append(NL);
 
 			// populates results structure
+			bufferToWriteOn.append("#ifdef SUN_MKL_DENSE").append(NL);
+			// --- case SYCL ---
+			bufferToWriteOn.append(indentTabs()).append("{").append(NL);
+			bufferToWriteOn.append(indentTabs()).append("realtype *ydot_host = N_VGetArrayPointer(ydot);").append(NL);
+			bufferToWriteOn.append(indentTabs()).append("memcpy(ydot_host, s.matrix, sizeof(double)*")
+					.append(totalDimensionAsString).append(")").append(";").append(NL);
+
+			bufferToWriteOn.append(indentTabs()).append("if (!qspcc_mkl_host_rhs_mode) {").append(NL);
+			bufferToWriteOn.append(indentTabs()).append(TAB).append("N_VCopyToDevice_Sycl(ydot);").append(NL);
+			bufferToWriteOn.append(indentTabs()).append("}").append(NL);
+	
+			bufferToWriteOn.append(indentTabs()).append("}").append(NL);
+
+			bufferToWriteOn.append("#else").append(NL);
+			// --- case SERIAL ---
 			bufferToWriteOn.append(indentTabs()).append("memcpy(NV_DATA_S(ydot), s.matrix, sizeof(double)*")
 					.append(totalDimensionAsString).append(")").append(";").append(NL);
+			bufferToWriteOn.append("#endif").append(NL);
 		} else
 			throw new UndefinedTranslationException(
 					CErrorMessage.INTERNAL_SUNDIALS_WRONG_INTEGRAND_FUNCTION_RETURN_TYPE, fun);
@@ -12664,6 +12696,9 @@ public class C extends CompilerBackend implements DAGListener<AAST, AASTNode, St
 		writer.append("#include <string.h>" + NL);
 		writer.append("#include <stdlib.h>" + NL);
 		writer.append("#include <nvector/nvector_serial.h>" + NL);
+		writer.append("#ifdef SUN_MKL_DENSE").append(NL);
+		writer.append("#include <nvector/nvector_sycl.h>").append(NL);
+		writer.append("#endif").append(NL);
 		writer.append("#include <sundials/sundials_types.h>" + NL);
 		writer.append("#include \"cmaes_interface.h\"" + NL);
 		writer.append("#include \"structures.h\"" + NL);
